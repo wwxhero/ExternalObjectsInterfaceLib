@@ -190,8 +190,8 @@ void CRealtimeNetworkDynamic::Send(IP ip, const cvTObjStateBuf& sb)
 	int tLen = 0;
 	char* uBuffer = tBuffer;
 
-		int uLen = SerializeExternalObj(&sb, uBuffer);
-		uBuffer += uLen;
+	int uLen = SerializeExternalObj(&sb, uBuffer);
+	uBuffer += uLen;
 
 	tLen = uBuffer - tBuffer;
 	assert(tLen <= tCap);
