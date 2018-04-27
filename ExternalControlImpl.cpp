@@ -29,7 +29,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnPeerSimUpdating(TObjectPoolIdx 
 	if (recieved)
 	{
 #ifdef _DISVRLINK
-		//bbox is not synced for VRLINK dis solution
+		//fixme: bbox is not synced for VRLINK dis solution
 		cvTObjState::ExternalDriverState* s_np = (cvTObjState::ExternalDriverState*)(&sbAlt->state.externalDriverState);
 		cvTObjState::ExternalDriverState* s_n  = (cvTObjState::ExternalDriverState*)(&curState->externalDriverState);
 		for (int i = 0; i < 2; i ++)
@@ -109,8 +109,7 @@ CVED::CDynObj* CExternalObjectControlImpl<TNetworkImpl>::CreatePeerDriver(CHeade
 	// Get the CVED object type and check to make sure it's valid.
 	//
 
-	//cvEObjType objType = eCV_VEHICLE; //alter it to be eCV_EXTERNAL_DRIVER when visual server is ready
-	cvEObjType objType = eCV_EXTERNAL_DRIVER;
+	cvEObjType objType = eCV_VEHICLE;
 
 	//
 	// Initialize the attributes.
@@ -146,8 +145,9 @@ CVED::CDynObj* CExternalObjectControlImpl<TNetworkImpl>::CreatePeerDriver(CHeade
 		//
 		// Create the CVED object.
 		//
-		pObj = cved->CreatePeerExternalObj(
+		pObj = cved->CreateDynObj(
 							blk.GetSimName()
+							, objType
 							, attr
 							, &cartPos
 							, &tan
@@ -217,8 +217,9 @@ CVED::CDynObj* CExternalObjectControlImpl<TNetworkImpl>::CreatePeerDriver(CHeade
 		//
 		// Create the CVED object.
 		//
-		pObj = cved->CreatePeerExternalObj(
+		pObj = cved->CreateDynObj(
 							blk.GetSimName()
+							, objType
 							, attr
 							, &cartPos
 							, &tan
