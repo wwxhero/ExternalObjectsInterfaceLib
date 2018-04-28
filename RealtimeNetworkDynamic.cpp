@@ -270,12 +270,6 @@ typedef struct _BuffUnit
 		, UNIT(es, lateral.i)\
 		, UNIT(es, lateral.j)\
 		, UNIT(es, lateral.k)\
-		, UNIT(es, boundBox[0].x)\
-		, UNIT(es, boundBox[0].y)\
-		, UNIT(es, boundBox[0].z)\
-		, UNIT(es, boundBox[1].x)\
-		, UNIT(es, boundBox[1].y)\
-		, UNIT(es, boundBox[1].z)\
 		, UNIT(es, vel)\
 		, UNIT(es, visualState)\
 		, UNIT(es, audioState)\

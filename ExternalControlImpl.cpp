@@ -28,8 +28,6 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnPeerSimUpdating(TObjectPoolIdx 
 	bool recieved = Receive(ip, sbAlt);
 	if (recieved)
 	{
-#ifdef _DISVRLINK
-		//fixme: bbox is not synced for VRLINK dis solution
 		cvTObjState::ExternalDriverState* s_np = (cvTObjState::ExternalDriverState*)(&sbAlt->state.externalDriverState);
 		cvTObjState::ExternalDriverState* s_n  = (cvTObjState::ExternalDriverState*)(&curState->externalDriverState);
 		for (int i = 0; i < 2; i ++)
@@ -38,7 +36,6 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnPeerSimUpdating(TObjectPoolIdx 
 			s_np->boundBox[i].y = s_n->boundBox[i].y - s_n->position.y + s_np->position.y;
 			s_np->boundBox[i].z = s_n->boundBox[i].z - s_n->position.z + s_np->position.z;
 		}
-#endif
 		memcpy(curInput, &sbAlt->contInp, sizeof(cvTObjContInp));
 		memcpy(curState, &sbAlt->state, sizeof(cvTObjState));
 	}
