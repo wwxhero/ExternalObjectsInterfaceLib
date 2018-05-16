@@ -15,9 +15,9 @@ public:
 	virtual ~CExternalObjectControlImpl();
 	virtual void PreUpdateDynamicModels();
 	virtual void PostUpdateDynamicModels();
-	virtual bool OnPeerSimUpdating(TObjectPoolIdx id, cvTObjContInp* curInput, cvTObjState* curState);
-	virtual void OnOwnSimUpdated(const cvTObjContInp* nextInput, const cvTObjState* nextState);
-	virtual bool Initialize(CHeaderDistriParseBlock& blk, CVED::CCved* pCved);
+	virtual bool OnGetUpdate(TObjectPoolIdx id, cvTObjContInp* curInput, cvTObjState* curState);
+	virtual void OnPushUpdate(const cvTObjContInp* nextInput, const cvTObjState* nextState);
+	virtual bool Initialize(CHeaderDistriParseBlock& blk, CVED::CCved* pCved, Type runAs);
 	virtual void UnInitialize(CVED::CCved* pCved);
 private:
 	typedef struct _SEG
@@ -33,7 +33,7 @@ private:
 	} SEG;
 	void InitIpclusters(const std::list<SEG>& ips, std::list<IP>& clusters);
 	void BroadCastObj(const cvTObjStateBuf* sb);
-	static CVED::CDynObj* CreatePeerDriver(CHeaderDistriParseBlock& blk, CVED::CCved* pCved);
+	static CVED::CDynObj* CreatePeerDriver(CHeaderDistriParseBlock& blk, CVED::CCved* cved, cvEObjType runAs);
 private:
 	std::map<IP, int> m_mapIp2Id;
 	std::map<int, IP> m_mapId2Ip;

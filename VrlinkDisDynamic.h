@@ -80,6 +80,7 @@ public:
 private:
 	void DisSend(DtExerciseConn* cnn, EntityPublisher& pub, const cvTObjState* s);
 	static void OnReceiveRawPdu( CPduExtObj* pdu, void* pThis );
+
 private:
 	std::map<IP, EntityPublisher> m_sendersPub; //currently only 1 entity will publish from client
 

@@ -15,7 +15,7 @@ CExternalObjectControlImpl<TNetworkImpl>::~CExternalObjectControlImpl()
 }
 
 template<class TNetworkImpl>
-bool CExternalObjectControlImpl<TNetworkImpl>::OnPeerSimUpdating(TObjectPoolIdx id, cvTObjContInp* curInput, cvTObjState* curState)
+bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdate(TObjectPoolIdx id, cvTObjContInp* curInput, cvTObjState* curState)
 {
 	std::map<int, IP>::iterator it = m_mapId2Ip.find(id);
 	if (it == m_mapId2Ip.end())
@@ -51,7 +51,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnPeerSimUpdating(TObjectPoolIdx 
 }
 
 template<class TNetworkImpl>
-void CExternalObjectControlImpl<TNetworkImpl>::OnOwnSimUpdated(const cvTObjContInp* nextInput, const cvTObjState* nextState)
+void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdate(const cvTObjContInp* nextInput, const cvTObjState* nextState)
 {
 	cvTObjStateBuf sb;
 	sb.contInp = *nextInput;
@@ -87,7 +87,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnOwnSimUpdated(const cvTObjContI
 }
 
 template<class TNetworkImpl>
-CVED::CDynObj* CExternalObjectControlImpl<TNetworkImpl>::CreatePeerDriver(CHeaderDistriParseBlock& blk, CVED::CCved* cved)
+CVED::CDynObj* CExternalObjectControlImpl<TNetworkImpl>::CreatePeerDriver(CHeaderDistriParseBlock& blk, CVED::CCved* cved, cvEObjType runAs)
 {
 	const double cMETER_TO_FEET = 3.2808; // feet
 	//
@@ -105,8 +105,6 @@ CVED::CDynObj* CExternalObjectControlImpl<TNetworkImpl>::CreatePeerDriver(CHeade
 	//
 	// Get the CVED object type and check to make sure it's valid.
 	//
-
-	cvEObjType objType = eCV_VEHICLE;
 
 	//
 	// Initialize the attributes.
@@ -144,7 +142,7 @@ CVED::CDynObj* CExternalObjectControlImpl<TNetworkImpl>::CreatePeerDriver(CHeade
 		//
 		pObj = cved->CreateDynObj(
 							blk.GetSimName()
-							, objType
+							, runAs
 							, attr
 							, &cartPos
 							, &tan
@@ -216,7 +214,7 @@ CVED::CDynObj* CExternalObjectControlImpl<TNetworkImpl>::CreatePeerDriver(CHeade
 		//
 		pObj = cved->CreateDynObj(
 							blk.GetSimName()
-							, objType
+							, runAs
 							, attr
 							, &cartPos
 							, &tan
@@ -316,7 +314,7 @@ CVED::CDynObj* CExternalObjectControlImpl<TNetworkImpl>::CreatePeerDriver(CHeade
 }
 
 template<class TNetworkImpl>
-bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBlock& hBlk, CVED::CCved* pCved)
+bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBlock& hBlk, CVED::CCved* pCved, CVED::IExternalObjectControl::Type runAs)
 {
 	std::set<IP> localhostIps;
 	GetLocalhostIps(localhostIps);
@@ -325,6 +323,8 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 	std::list<IP> lstDistIps;
 	int idCved = 0; //cved object id
 	int numSelf = 0;
+	//edo_controller, ado_controller
+	cvEObjType objTypes[] = {eCV_VEHICLE, eCV_EXTERNAL_DRIVER};
 	do
 	{
 		std::string ipStr = hBlk.GetIPV4();
@@ -337,7 +337,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 			SEG seg = {simIP, simMask};
 			lstDistSegs.push_back(seg);
 			lstDistIps.push_back(simIP);
-			CVED::CDynObj* peerObj = CreatePeerDriver(hBlk, pCved);
+			CVED::CDynObj* peerObj = CreatePeerDriver(hBlk, pCved, objTypes[runAs]);
 			idCved = peerObj->GetId();
 			m_lstPeers.push_back(peerObj);
 			m_mapId2Ip.insert(std::pair<int, IP>(idCved, simIP));
