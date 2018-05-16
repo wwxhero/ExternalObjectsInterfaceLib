@@ -136,7 +136,7 @@ void CVrlinkDisDynamic::NetworkInitialize(const std::list<IP>& sendTo, const std
 	m_receivedEntities = new DtReflectedEntityList(m_reciver);
 	DtClock* clk = m_reciver->clock();
 	clk->init();
-	CPduExtObj::StartListening(m_reciver, OnReceiveRawPdu, this);
+	CCustomPdu::StartListening<CPduExtObj, (DtPduKind)CCustomPdu::ExtObjState>(m_reciver, OnReceiveRawPdu, this);
 
 	for (std::list<IP>::const_iterator it = receiveFrom.begin()
 		; it != receiveFrom.end()
@@ -162,7 +162,7 @@ void CVrlinkDisDynamic::NetworkUninitialize()
 		delete p.second.cnn;
 	}
 	delete m_receivedEntities;
-	CPduExtObj::StopListening(m_reciver, OnReceiveRawPdu, this);
+	CCustomPdu::StopListening<(DtPduKind)CCustomPdu::ExtObjState>(m_reciver, OnReceiveRawPdu, this);
 	delete m_reciver;
 
 	for (std::map<IP, StateBuffer>::iterator it = m_receivedStates.begin()
@@ -176,10 +176,11 @@ void CVrlinkDisDynamic::NetworkUninitialize()
 
 }
 
-void CVrlinkDisDynamic::OnReceiveRawPdu( CPduExtObj* pdu, void* p)
+void CVrlinkDisDynamic::OnReceiveRawPdu( CCustomPdu* pdu, void* p)
 {
 	CVrlinkDisDynamic* pThis = reinterpret_cast<CVrlinkDisDynamic*>(p);
-	const CPduExtObj::ExtObjRawState& rs = pdu->GetState();
+	CPduExtObj* pExtObj = static_cast<CPduExtObj*>(pdu);
+	const CPduExtObj::RawState& rs = pExtObj->GetState();
 	std::map<IP, StateBuffer>::iterator it = pThis->m_receivedStates.find(rs.ip);
 	if (pThis->m_receivedStates.end() == it) //rejects unrecognizable connections
 		return;
@@ -195,7 +196,7 @@ void CVrlinkDisDynamic::OnReceiveRawPdu( CPduExtObj* pdu, void* p)
 	memcpy(s.posHint, rs.posHint, sizeof(rs.posHint));
 	s.dynaFidelity = rs.dynaFidelity;
 #ifdef _DEBUG
-	pdu->printData();
+	pExtObj->printData();
 #endif
 }
 

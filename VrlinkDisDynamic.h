@@ -16,7 +16,7 @@
 #include "inetworkdynamic.h"
 #include "Clock.h"
 #include <map>
-
+#include "CustomPdu.h"
 
 class DtExerciseConn;
 class DtEntityPublisher;
@@ -24,7 +24,7 @@ class DtTopoView;
 class DtReflectedEntityList;
 union cvTObjState;
 struct cvTObjStateBuf;
-class CPduExtObj;
+
 
 class CVrlinkDisDynamic :
 	public INetworkDynamic
@@ -79,7 +79,7 @@ public:
 	virtual void PostDynaCalc();
 private:
 	void DisSend(DtExerciseConn* cnn, EntityPublisher& pub, const cvTObjState* s);
-	static void OnReceiveRawPdu( CPduExtObj* pdu, void* pThis );
+	static void OnReceiveRawPdu( CCustomPdu* pdu, void* pThis );
 
 private:
 	std::map<IP, EntityPublisher> m_sendersPub; //currently only 1 entity will publish from client

@@ -1,23 +1,13 @@
 #pragma once
-
-#include <vl/pdu.h>
-#include <vl/exerciseConnDIS.h>
-#include <vl/entityStatePdu.h>
-#include "inetworkdynamic.h"
-#include "cveddecl.h"
+#include "CustomPdu.h"
 #include "objlayout.h"
-class CPduExtObj;
-
-typedef void (*OnReceiveObj)( CPduExtObj* pdu, void* pThis);
-const DtPduKind CPduExtObjKind = DtPduKind(221);
-
 class CPduExtObj :
-	public DtPdu
+	public CCustomPdu
 {
+	DECLARE_PDU_DYNCREAT(CPduExtObj)
 public:
-	typedef struct ExtObjRawState_tag
+	struct RawState: public CCustomPdu::RawState
 	{
-		IP                ip;
 		TU16b             visualState;
 		TU16b             audioState;
 		double            suspStif;     /* suspension stiffness */
@@ -27,24 +17,35 @@ public:
 		double            velBrake;
 		cvTerQueryHint    posHint[4];
 		EDynaFidelity     dynaFidelity; /* vehicle's dynamics fidelity  */
-	} ExtObjRawState;
-	CPduExtObj(IP ip, const cvTObjState::ExternalDriverState& s);
-	virtual ~CPduExtObj(void);
-	static void StartListening(DtExerciseConn* cnn, OnReceiveObj proc, void* pThis);
-	static void StopListening(DtExerciseConn* cnn, OnReceiveObj proc, void* pThis);
-	const ExtObjRawState& GetState() const
+	};
+	const RawState& GetState() const
 	{
 		return m_rs;
 	}
+private:
+	virtual void Update(bool store);
+public:
+	CPduExtObj(IP ip, const cvTObjState::ExternalDriverState& s) : CCustomPdu((DtPduKind)ExtObjState)
+	{
+		m_rs.ip = ip;
+		m_rs.visualState = s.visualState;
+		m_rs.audioState = s.audioState;
+		m_rs.suspStif = s.suspStif;
+		m_rs.suspDamp = s.suspDamp;
+		m_rs.tireStif = s.tireStif;
+		m_rs.tireDamp = s.tireDamp;
+		m_rs.velBrake = s.velBrake;
+		memcpy(m_rs.posHint, s.posHint, 4 * sizeof(cvTerQueryHint));
+		m_rs.dynaFidelity = s.dynaFidelity;
+		Update(true);
+	}
+	virtual ~CPduExtObj(void);
+
 #ifdef _DEBUG
 	virtual void printData() const;
 #endif
-private:
-	CPduExtObj(const DtNetPacket *initial, DtBufferPtr buffer, DtPduFactory* pduFactory);
-	static DtPdu* create(const DtNetPacket *initial, DtBufferPtr buffer = DtUSE_INTERNAL_BUFFER, DtPduFactory* pduFactory = 0);
-	virtual DtPduKind internalGetPduKind() const;
-	void Update(bool store);
 
-	ExtObjRawState m_rs;
+private:
+	RawState 	m_rs;
 };
 

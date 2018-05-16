@@ -151,6 +151,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Clock.h" />
+    <ClInclude Include="CustomPdu.h" />
     <ClInclude Include="ExternalControlImpl.h" />
     <ClInclude Include="INetworkDynamic.h" />
     <ClInclude Include="LeftistHeap.h" />
