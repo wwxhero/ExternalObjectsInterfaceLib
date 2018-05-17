@@ -40,7 +40,6 @@ private:
 		return m_type;
 	}
 protected:
-	virtual void Update(bool store) = 0;
 	template<typename TRawState>
 	void Update(bool store, BuffUnit* units, unsigned int num)
 	{
@@ -97,7 +96,8 @@ private:
 	friend class CCustomPdu;\
 	static DtPdu* create(const DtNetPacket *initial, DtBufferPtr buffer = DtUSE_INTERNAL_BUFFER, DtPduFactory* pduFactory = 0);\
 	private:\
-	CustomDesc();
+	CustomDesc();\
+	void Update(bool store);
 
 #define IMPLEMENT_PDU_DYNCREATE(CustomDesc, kind)\
 	DtPdu* CustomDesc::create(const DtNetPacket *initial, DtBufferPtr buffer, DtPduFactory* pduFactory)\

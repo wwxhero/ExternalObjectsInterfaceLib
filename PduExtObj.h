@@ -22,8 +22,6 @@ public:
 	{
 		return m_rs;
 	}
-private:
-	virtual void Update(bool store);
 public:
 	CPduExtObj(IP ip, const cvTObjState::ExternalDriverState& s) : CCustomPdu((DtPduKind)ExtObjState)
 	{
