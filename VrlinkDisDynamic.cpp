@@ -35,21 +35,6 @@
 
 #include "PduExtObj.h"
 
-inline int ID2IP(const DtObjectId& id)
-{
-	int ip;
-	short* ip_a = (short* )&ip;
-	ip_a[0] = id.site();
-	ip_a[1] = id.host();
-	return ip;
-}
-
-inline DtObjectId IP2ID(int ip)
-{
-	short* id = (short*)&ip;
-	return DtObjectId(id[0], id[1], 0);
-}
-
 CVrlinkDisDynamic::VrLinkConf CVrlinkDisDynamic::s_disConf = {
 	DtDrDrmRvw
 	, DtTimeStampRelative
@@ -69,8 +54,9 @@ CVrlinkDisDynamic::VrLinkConf CVrlinkDisDynamic::s_disConf = {
 	, 0, 0
 };
 
-CVrlinkDisDynamic::CVrlinkDisDynamic(void)
-	: m_reciver(NULL)
+CVrlinkDisDynamic::CVrlinkDisDynamic(TERMINAL type)
+	: c_type(type)
+	, m_reciver(NULL)
 	, m_receivedEntities(NULL)
 {
 }
@@ -95,6 +81,7 @@ void CVrlinkDisDynamic::NetworkInitialize(const std::list<IP>& sendTo, const std
 	DtThresholder::setDfltRotationThreshold(s_disConf.rotationThreshold);
 	DtEntityType f18Type(s_disConf.kind, s_disConf.domain,
 		s_disConf.country, s_disConf.category, s_disConf.subCategory, s_disConf.specific, s_disConf.extra);
+	GlobalId id_global_proxy = {self, 0};
 	char ipStr[16] = {0};
 	for (std::list<IP>::const_iterator it = sendTo.begin()
 		; it != sendTo.end()
@@ -108,7 +95,7 @@ void CVrlinkDisDynamic::NetworkInitialize(const std::list<IP>& sendTo, const std
 		ASSERT(DtExerciseConn::DtINIT_SUCCESS == status);
 		DtEntityPublisher* pub = new DtEntityPublisher(f18Type, cnn
 			, (DtDeadReckonTypes)s_disConf.drAlgor, DtForceFriendly
-			, DtEntityPublisher::guiseSameAsType(), IP2ID(self));
+			, DtEntityPublisher::guiseSameAsType(), GlobalId2VrlinkId(id_global_proxy));
 		DtEntityStateRepository* esr = pub->entityStateRep();
 		DtTopoView* view = new DtTopoView(esr, s_disConf.latitude, s_disConf.longitude);
 		view->setOrientation(DtTaitBryan(s_disConf.viewOriPsi, s_disConf.viewOriTheta, s_disConf.viewOriPhi));
@@ -116,10 +103,11 @@ void CVrlinkDisDynamic::NetworkInitialize(const std::list<IP>& sendTo, const std
 		DtClock* clk = cnn->clock();
 		clk->init();
 
-		EntityPublisher& ep = m_sendersPub[ip];
+		ProxyCnn& ep = m_proxyCnns[ip];
 		ep.cnn = cnn;
-		ep.pub = pub;
-		ep.view = view;
+
+		EntityProxy proxy = {pub, view};
+		ep.pubs[0] = proxy;
 	}
 
 	//initialize for receiver
@@ -143,35 +131,45 @@ void CVrlinkDisDynamic::NetworkInitialize(const std::list<IP>& sendTo, const std
 		; it ++)
 	{
 		IP ip = *it;
-		StateBuffer& buf = m_receivedStates[ip];
+		GlobalId id_global_stub = {ip, 0};
+		EntityStub& buf = m_reciversStub[id_global_stub];
 		buf.updated = false;
-		buf.item = new cvTObjStateBuf;
-		memset(buf.item, 0, sizeof(cvTObjStateBuf));
+		buf.sb = new cvTObjStateBuf;
+		memset(buf.sb, 0, sizeof(cvTObjStateBuf));
 	}
 	m_self = self;
 }
+
 void CVrlinkDisDynamic::NetworkUninitialize()
 {
-	for (std::map<IP, CVrlinkDisDynamic::EntityPublisher>::iterator it = m_sendersPub.begin()
-		; it != m_sendersPub.end()
-		; it ++)
+	for (std::map<IP, ProxyCnn>::iterator it_proxyCnn = m_proxyCnns.begin()
+		; it_proxyCnn != m_proxyCnns.end()
+		; it_proxyCnn ++)
 	{
-		std::pair<IP, CVrlinkDisDynamic::EntityPublisher> p = *it;
-		delete p.second.view;
-		delete p.second.pub;
-		delete p.second.cnn;
+		std::pair<IP, ProxyCnn> p = *it_proxyCnn;
+		DtExerciseConn* cnn = p.second.cnn;
+		for (std::map<TObjectPoolIdx, EntityProxy>::iterator it_pub = p.second.pubs.begin()
+			; it_pub != p.second.pubs.end()
+			; it_pub ++)
+		{
+			EntityProxy proxyEntity = (*it_pub).second;
+			delete proxyEntity.view;
+			delete proxyEntity.pub;
+		}
+		delete cnn;
 	}
+
 	delete m_receivedEntities;
 	CCustomPdu::StopListening<(DtPduKind)CCustomPdu::ExtObjState>(m_reciver, OnReceiveRawPdu, this);
 	delete m_reciver;
 
-	for (std::map<IP, StateBuffer>::iterator it = m_receivedStates.begin()
-		; it != m_receivedStates.end()
+	for (std::map<GlobalId, EntityStub>::iterator it = m_reciversStub.begin()
+		; it != m_reciversStub.end()
 		; it ++)
 	{
-		std::pair<IP, StateBuffer> p = *it;
-		StateBuffer b = p.second;
-		delete b.item;
+		std::pair<GlobalId, EntityStub> p = *it;
+		EntityStub b = p.second;
+		delete b.sb;
 	}
 
 }
@@ -181,11 +179,11 @@ void CVrlinkDisDynamic::OnReceiveRawPdu( CCustomPdu* pdu, void* p)
 	CVrlinkDisDynamic* pThis = reinterpret_cast<CVrlinkDisDynamic*>(p);
 	CPduExtObj* pExtObj = static_cast<CPduExtObj*>(pdu);
 	const CPduExtObj::RawState& rs = pExtObj->GetState();
-	std::map<IP, StateBuffer>::iterator it = pThis->m_receivedStates.find(rs.ip);
-	if (pThis->m_receivedStates.end() == it) //rejects unrecognizable connections
+	std::map<GlobalId, EntityStub>::iterator it = pThis->m_reciversStub.find(rs.id);
+	if (pThis->m_reciversStub.end() == it) //rejects unrecognizable connections
 		return;
-	StateBuffer& sb = (*it).second;
-	cvTObjState::ExternalDriverState& s = sb.item->state.externalDriverState;
+	EntityStub& esb = (*it).second;
+	cvTObjState::ExternalDriverState& s = esb.sb->state.externalDriverState;
 	s.visualState = rs.visualState;
 	s.audioState = rs.audioState;
 	s.suspStif = rs.suspStif;
@@ -200,30 +198,15 @@ void CVrlinkDisDynamic::OnReceiveRawPdu( CCustomPdu* pdu, void* p)
 #endif
 }
 
-void CVrlinkDisDynamic::Send(IP ip, const cvTObjStateBuf& sb)
+void CVrlinkDisDynamic::Send(IP ip, GlobalId id_global, const cvTObjStateBuf& sb)
 {
-	ASSERT(m_sendersPub.find(ip) != m_sendersPub.end());
-	EntityPublisher& pub = m_sendersPub[ip];
-	DtExerciseConn* cnn = pub.cnn;
-
+	EntityPublisher epb;
+	bool exists_a_pub = EntityPub(ip, id_global, epb);
+	ASSERT(exists_a_pub);
 	const cvTObjState* s = (const cvTObjState*)(&sb.state);
-	DisSend(cnn, pub, s);
-	CPduExtObj pduObj(m_self, sb.state.externalDriverState);
-	cnn->sendStamped(pduObj);
-
-}
-bool CVrlinkDisDynamic::Receive(IP ip, const cvTObjStateBuf*& sb)
-{
-	const StateBuffer& buff = m_receivedStates[ip];
-	if (buff.updated)
-		sb = buff.item;
-	return buff.updated;
-}
-
-void CVrlinkDisDynamic::DisSend(DtExerciseConn* cnn, EntityPublisher& pub, const cvTObjState* s)
-{
 	ExternalDriverStateTran stateTran;
 	Transform(s->externalDriverState, stateTran);
+
 #ifdef _DEBUG
 	const cvTObjState::ExternalDriverState& es = s->externalDriverState;
 	glm::vec3 angularVel(stateTran.rot.x(), stateTran.rot.y(), stateTran.rot.z());
@@ -231,7 +214,7 @@ void CVrlinkDisDynamic::DisSend(DtExerciseConn* cnn, EntityPublisher& pub, const
 	glm::vec3 aDir = glm::normalize(angularVel);
 	 cvTObjState::ExternalDriverState es_prime;
 	Transform(stateTran, es_prime);
-	TRACE(TEXT("DisSend id:%d, \n\t position: [%E,%E,%E]->[%E,%E,%E]")
+	TRACE(TEXT("Send id:%d, \n\t position: [%E,%E,%E]->[%E,%E,%E]")
 							TEXT(", \n\t tangent: [%E,%E,%E]->[%E,%E,%E]")
 							TEXT(", \n\t lateral: [%E,%E,%E]->[%E,%E,%E]")
 							TEXT(", \n\t vel: [%E]->[%E]")
@@ -249,32 +232,50 @@ void CVrlinkDisDynamic::DisSend(DtExerciseConn* cnn, EntityPublisher& pub, const
 				, es.angularVel.i, es.angularVel.j, es.angularVel.k, es_prime.angularVel.i, es_prime.angularVel.j, es_prime.angularVel.k, aL, aDir.x, aDir.y, aDir.z
 				, stateTran.ori.phi(), stateTran.ori.theta(), stateTran.ori.psi());
 #endif
-	pub.view->setVelocity(stateTran.vel);
-	pub.view->setAcceleration(stateTran.acc);
-	pub.view->setRotationalVelocity(stateTran.rot);
-	pub.view->setLocation(stateTran.loc);
-	pub.view->setOrientation(stateTran.ori);
+	epb.view->setVelocity(stateTran.vel);
+	epb.view->setAcceleration(stateTran.acc);
+	epb.view->setRotationalVelocity(stateTran.rot);
+	epb.view->setLocation(stateTran.loc);
+	epb.view->setOrientation(stateTran.ori);
+
+	CPduExtObj pduObj(id_global, sb.state.externalDriverState);
+	epb.cnn->sendStamped(pduObj);
 }
+
+bool CVrlinkDisDynamic::Receive(GlobalId id_global, const cvTObjStateBuf*& sb)
+{
+	std::map<GlobalId, EntityStub>::iterator it = m_reciversStub.find(id_global);
+	if (it != m_reciversStub.end())
+	{
+		EntityStub esb = (*it).second;
+		if (esb.updated)
+			sb = esb.sb;
+		return esb.updated;
+	}
+	else
+		return false;
+}
+
 
 void CVrlinkDisDynamic::PreDynaCalc()
 {
 	//pre calc for sending
 	DtTime simTime = (DtTime)m_sysClk.GetTickCnt()/(DtTime)1000; //in seconds
-	for (std::map<IP, EntityPublisher>::iterator it = m_sendersPub.begin()
-		; it != m_sendersPub.end()
+	for (std::map<IP, ProxyCnn>::iterator it = m_proxyCnns.begin()
+		; it != m_proxyCnns.end()
 		; it ++)
 	{
-		std::pair<IP, EntityPublisher> p = *it;
+		std::pair<IP, ProxyCnn> p = *it;
 		DtExerciseConn* cnn = p.second.cnn;
 		cnn->clock()->setSimTime(simTime);
 		cnn->drainInput();
 	}
 	//pre calc for receiving
-	for (std::map<IP, StateBuffer>::iterator it = m_receivedStates.begin()
-		; it != m_receivedStates.end()
+	for (std::map<GlobalId, EntityStub>::iterator it = m_reciversStub.begin()
+		; it != m_reciversStub.end()
 		; it ++)
 	{
-		StateBuffer& p = (*it).second;
+		EntityStub& p = (*it).second;
 		p.updated = false;
 	}
 
@@ -284,9 +285,8 @@ void CVrlinkDisDynamic::PreDynaCalc()
 	for(; e != NULL; e = e->next())
 	{
 		const DtObjectId& id = e->entityId();
-		int ip = ID2IP(id);
-		std::map<IP, StateBuffer>::iterator it = m_receivedStates.find(ip);
-		if (m_receivedStates.end() == it) //rejects unrecognizable connections
+		std::map<GlobalId, EntityStub>::iterator it = m_reciversStub.find(VrlinkId2GlobalId(id));
+		if (m_reciversStub.end() == it) //rejects unrecognizable connections
 			continue;
 
 		DtEntityStateRepository *esr = e->entityStateRep();
@@ -301,11 +301,11 @@ void CVrlinkDisDynamic::PreDynaCalc()
 		stateTran.ori = view.orientation();
 
 
-		StateBuffer& buff = (*it).second;
-		cvTObjStateBuf* sb = buff.item;
+		EntityStub& esb = (*it).second;
+		cvTObjStateBuf* sb = esb.sb;
 		cvTObjState::ExternalDriverState* s = (cvTObjState::ExternalDriverState*)&sb->state;
 		Transform(stateTran, *s);
-		buff.updated = true;
+		esb.updated = true;
 	}
 
 }
@@ -313,12 +313,17 @@ void CVrlinkDisDynamic::PreDynaCalc()
 void CVrlinkDisDynamic::PostDynaCalc()
 {
 	//post calc for sending
-	for (std::map<IP, EntityPublisher>::iterator it = m_sendersPub.begin()
-		; it != m_sendersPub.end()
+	for (std::map<IP, ProxyCnn>::iterator it = m_proxyCnns.begin()
+		; it != m_proxyCnns.end()
 		; it ++)
 	{
-		std::pair<IP, EntityPublisher> p = *it;
-		DtEntityPublisher* pub = p.second.pub;
-		pub->tick();
+		std::pair<IP, ProxyCnn> p = *it;
+		for (std::map<TObjectPoolIdx, EntityProxy>::iterator it_pubs = p.second.pubs.begin()
+			; it_pubs != p.second.pubs.end()
+			; it_pubs ++)
+		{
+			DtEntityPublisher* pub = (*it_pubs).second.pub;
+			pub->tick();
+		}
 	}
 }

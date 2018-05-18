@@ -5,7 +5,7 @@
 #include "utility.h"
 
 template<class TNetworkImpl>
-CExternalObjectControlImpl<TNetworkImpl>::CExternalObjectControlImpl()
+CExternalObjectControlImpl<TNetworkImpl>::CExternalObjectControlImpl() : m_selfIp(0)
 {
 }
 
@@ -15,17 +15,17 @@ CExternalObjectControlImpl<TNetworkImpl>::~CExternalObjectControlImpl()
 }
 
 template<class TNetworkImpl>
-bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdate(TObjectPoolIdx id, cvTObjContInp* curInput, cvTObjState* curState)
+bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdate(TObjectPoolIdx id_local, cvTObjContInp* curInput, cvTObjState* curState)
 {
-	std::map<int, IP>::iterator it = m_mapId2Ip.find(id);
-	if (it == m_mapId2Ip.end())
+	std::map<TObjectPoolIdx, GlobalId>::iterator it = m_mapLid2Gid.find(id_local);
+	if (it == m_mapLid2Gid.end())
 	{
 		//assert(0);
 		return false;
 	}
-	IP ip = m_mapId2Ip[id];
+	GlobalId id_global = (*it).second;
 	const cvTObjStateBuf* sbAlt = NULL;
-	bool recieved = Receive(ip, sbAlt);
+	bool recieved = Receive(id_global, sbAlt);
 	if (recieved)
 	{
 		cvTObjState::ExternalDriverState* s_np = (cvTObjState::ExternalDriverState*)(&sbAlt->state.externalDriverState);
@@ -44,21 +44,21 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdate(TObjectPoolIdx id, cv
 		, TEXT("Received")
 	};
 	int idx = recieved? 1: 0;
-	TRACE(TEXT("PreUpdating %s id:%d, [%E,%E,%E], [%E,%E,%E]\n"), recFlag[idx], id,
+	TRACE(TEXT("PreUpdating %s id:%d, [%E,%E,%E], [%E,%E,%E]\n"), recFlag[idx], id_local,
 									curState->anyState.position.x, curState->anyState.position.y, curState->anyState.position.z,
 									curState->anyState.tangent.i, curState->anyState.tangent.j, curState->anyState.tangent.k);
 	return recieved;
 }
 
 template<class TNetworkImpl>
-void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdate(const cvTObjContInp* nextInput, const cvTObjState* nextState)
+void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdate(TObjectPoolIdx id_local, const cvTObjContInp* nextInput, const cvTObjState* nextState)
 {
 	cvTObjStateBuf sb;
 	sb.contInp = *nextInput;
 	sb.state = *nextState;
-	BroadCastObj(&sb);
+	BroadCastObj(id_local, &sb);
 	const struct cvTObjState::ExternalDriverState& s = nextState->externalDriverState;
-	TRACE(TEXT("PostUpdating id:%d, \n\t position: [%E,%E,%E]")
+	TRACE(TEXT("OnPushUpdate id:%d, \n\t position: [%E,%E,%E]")
 							TEXT(", \n\t tangent: [%E,%E,%E]")
 							TEXT(", \n\t lateral: [%E,%E,%E]")
 							TEXT(", \n\t bbox: [%E,%E,%E], [%E,%E,%E]")
@@ -70,7 +70,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdate(const cvTObjContInp*
 							TEXT(", \n\t latAccel: [%E]")
 							TEXT(", \n\t Fidelity: [%d]")
 							TEXT(", \n\t angularVel: [%E, %E, %E]\n")
-										, 0
+										, id_local
 										, s.position.x, s.position.y, s.position.z
 										, s.tangent.i, s.tangent.j, s.tangent.k
 										, s.lateral.i, s.lateral.j, s.lateral.k
@@ -314,14 +314,14 @@ CVED::CDynObj* CExternalObjectControlImpl<TNetworkImpl>::CreatePeerDriver(CHeade
 }
 
 template<class TNetworkImpl>
-bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBlock& hBlk, CVED::CCved* pCved, CVED::IExternalObjectControl::Type runAs)
+bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBlock& hBlk, CVED::CCved* pCved)
 {
 	std::set<IP> localhostIps;
 	GetLocalhostIps(localhostIps);
 
 	std::list<SEG> lstDistSegs;
 	std::list<IP> lstDistIps;
-	int idCved = 0; //cved object id
+	int id_local = 0; //cved object id
 	int numSelf = 0;
 	//edo_controller, ado_controller
 	cvEObjType objTypes[] = {eCV_VEHICLE, eCV_EXTERNAL_DRIVER};
@@ -337,18 +337,16 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 			SEG seg = {simIP, simMask};
 			lstDistSegs.push_back(seg);
 			lstDistIps.push_back(simIP);
-			CVED::CDynObj* peerObj = CreatePeerDriver(hBlk, pCved, objTypes[runAs]);
-			idCved = peerObj->GetId();
+			CVED::CDynObj* peerObj = CreatePeerDriver(hBlk, pCved, objTypes[c_type]);
+			id_local = peerObj->GetId();
 			m_lstPeers.push_back(peerObj);
-			m_mapId2Ip.insert(std::pair<int, IP>(idCved, simIP));
-			m_mapIp2Id.insert(std::pair<IP, int>(simIP, idCved));
-
+			GlobalId id_global = {simIP, 0};
+			m_mapLid2Gid.insert(std::pair<TObjectPoolIdx, GlobalId>(id_local, id_global));
 		}
 		else
 		{
+			m_selfIp = simIP;
 			hBlk.TagLocalhost();
-			m_mapId2Ip.insert(std::pair<int, IP>(0, simIP));
-			m_mapIp2Id.insert(std::pair<IP, int>(simIP, 0));
 			numSelf ++;
 		}
 	}while (hBlk.NextExternalBlk());
@@ -357,8 +355,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 	if (ok)
 	{
 		InitIpclusters(lstDistSegs, m_ipClusters);
-
-		NetworkInitialize(m_ipClusters, lstDistIps, hBlk.GetPort(), m_mapId2Ip[0]);
+		NetworkInitialize(m_ipClusters, lstDistIps, hBlk.GetPort(), m_selfIp);
 	}
 	return ok;
 }
@@ -407,8 +404,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::UnInitialize(CVED::CCved* pCved)
 {
 	NetworkUninitialize();
 	m_ipClusters.clear();
-	m_mapId2Ip.clear();
-	m_mapIp2Id.clear();
+	m_mapLid2Gid.clear();
 	for (std::list<CVED::CDynObj*>::iterator it = m_lstPeers.begin(); it != m_lstPeers.end(); it ++)
 		pCved->DeleteDynObj(*it);
 	m_lstPeers.clear();
@@ -416,15 +412,16 @@ void CExternalObjectControlImpl<TNetworkImpl>::UnInitialize(CVED::CCved* pCved)
 }
 
 template<class TNetworkImpl>
-void CExternalObjectControlImpl<TNetworkImpl>::BroadCastObj(const cvTObjStateBuf* sb)
+void CExternalObjectControlImpl<TNetworkImpl>::BroadCastObj(TObjectPoolIdx id_local, const cvTObjStateBuf* sb)
 {
+	GlobalId id_global = {m_selfIp, id_local};
 	for (std::list<IP>::iterator it = m_ipClusters.begin(); it != m_ipClusters.end(); it ++)
 	{
 		IP ipCluster = *it;
 		unsigned char* ipv4 = (unsigned char*)&ipCluster;
 		TRACE(TEXT("Send to(IPV4):%d.%d.%d.%d\n")
 										, ipv4[0], ipv4[1], ipv4[2], ipv4[3]);
-		Send(ipCluster, *sb);
+		Send(ipCluster, id_global, *sb);
 	}
 }
 

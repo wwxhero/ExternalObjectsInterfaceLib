@@ -4,7 +4,8 @@
 IMPLEMENT_PDU_DYNCREATE(CPduExtObj, (DtPduKind)ExtObjState)
 
 BEGIN_UPDATE(CPduExtObj)
-	UPDATE_UNIT(m_rs, ip)
+	UPDATE_UNIT(m_rs, id.owner)
+	UPDATE_UNIT(m_rs, id.objId)
 	UPDATE_UNIT(m_rs, visualState)
 	UPDATE_UNIT(m_rs, audioState)
 	UPDATE_UNIT(m_rs, suspStif)
@@ -44,7 +45,7 @@ void CPduExtObj::printData() const
 							", \n\t velBrake: [%E]"
 							", \n\t Fidelity: [%d]"
 							"\n"
-										, m_rs.ip
+										, m_rs.id.owner
 										, m_rs.visualState, m_rs.audioState
 										, m_rs.suspStif, m_rs.suspDamp, m_rs.tireStif, m_rs.tireDamp
 										, m_rs.velBrake

@@ -162,7 +162,9 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="utility.h" />
+    <ClInclude Include="VrlinkDisAdoCtrl.h" />
     <ClInclude Include="VrlinkDisDynamic.h" />
+    <ClInclude Include="VrlinkDisEdoCtrl.h" />
     <ClInclude Include="vrlinkMath.h" />
   </ItemGroup>
   <ItemGroup>
@@ -177,7 +179,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="utility.cpp" />
+    <ClCompile Include="VrlinkDisAdoCtrl.cpp" />
     <ClCompile Include="VrlinkDisDynamic.cpp" />
+    <ClCompile Include="VrlinkDisEdoCtrl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\IgComm\IgComm.vcxproj">

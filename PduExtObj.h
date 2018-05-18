@@ -23,9 +23,9 @@ public:
 		return m_rs;
 	}
 public:
-	CPduExtObj(IP ip, const cvTObjState::ExternalDriverState& s) : CCustomPdu((DtPduKind)ExtObjState)
+	CPduExtObj(GlobalId id_global, const cvTObjState::ExternalDriverState& s) : CCustomPdu((DtPduKind)ExtObjState)
 	{
-		m_rs.ip = ip;
+		m_rs.id = id_global;
 		m_rs.visualState = s.visualState;
 		m_rs.audioState = s.audioState;
 		m_rs.suspStif = s.suspStif;

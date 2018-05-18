@@ -25,7 +25,7 @@ public:
 	} BuffUnit;
 	struct RawState
 	{
-		IP ip;
+		GlobalId id;
 	};
 	CCustomPdu(DtPduKind t) : m_type(t)
 	{
