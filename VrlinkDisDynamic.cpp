@@ -58,6 +58,7 @@ CVrlinkDisDynamic::CVrlinkDisDynamic(TERMINAL type)
 	: c_type(type)
 	, m_reciver(NULL)
 	, m_receivedEntities(NULL)
+	, m_pCved(NULL)
 {
 }
 
@@ -203,6 +204,8 @@ void CVrlinkDisDynamic::Send(IP ip, GlobalId id_global, const cvTObjStateBuf& sb
 	EntityPublisher epb;
 	bool exists_a_pub = EntityPub(ip, id_global, epb);
 	ASSERT(exists_a_pub);
+	if (!exists_a_pub)
+		return;
 	const cvTObjState* s = (const cvTObjState*)(&sb.state);
 	ExternalDriverStateTran stateTran;
 	Transform(s->externalDriverState, stateTran);

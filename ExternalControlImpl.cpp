@@ -5,7 +5,9 @@
 #include "utility.h"
 
 template<class TNetworkImpl>
-CExternalObjectControlImpl<TNetworkImpl>::CExternalObjectControlImpl() : m_selfIp(0)
+CExternalObjectControlImpl<TNetworkImpl>::CExternalObjectControlImpl()
+	: m_selfIp(0)
+	, m_pCved(NULL)
 {
 }
 
@@ -314,7 +316,7 @@ CVED::CDynObj* CExternalObjectControlImpl<TNetworkImpl>::CreatePeerDriver(CHeade
 }
 
 template<class TNetworkImpl>
-bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBlock& hBlk, CVED::CCved* pCved)
+bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBlock& hBlk, CVED::CCvedDistri* pCved)
 {
 	std::set<IP> localhostIps;
 	GetLocalhostIps(localhostIps);
@@ -356,6 +358,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 	{
 		InitIpclusters(lstDistSegs, m_ipClusters);
 		NetworkInitialize(m_ipClusters, lstDistIps, hBlk.GetPort(), m_selfIp);
+		m_pCved = pCved;
 	}
 	return ok;
 }
@@ -400,13 +403,13 @@ void CExternalObjectControlImpl<TNetworkImpl>::InitIpclusters(const std::list<SE
 }
 
 template<class TNetworkImpl>
-void CExternalObjectControlImpl<TNetworkImpl>::UnInitialize(CVED::CCved* pCved)
+void CExternalObjectControlImpl<TNetworkImpl>::UnInitialize()
 {
 	NetworkUninitialize();
 	m_ipClusters.clear();
 	m_mapLid2Gid.clear();
 	for (std::list<CVED::CDynObj*>::iterator it = m_lstPeers.begin(); it != m_lstPeers.end(); it ++)
-		pCved->DeleteDynObj(*it);
+		m_pCved->DeleteDynObj(*it);
 	m_lstPeers.clear();
 
 }
@@ -437,3 +440,29 @@ void CExternalObjectControlImpl<TNetworkImpl>::PostUpdateDynamicModels()
 	PostDynaCalc();
 }
 
+template<class TNetworkImpl>
+void CExternalObjectControlImpl<TNetworkImpl>::CreateAdoStub(GlobalId id_global
+													, const std::string& name
+													, const cvTObjAttr& cAttr
+													, const CPoint3D* cpInitPos
+													, const CVector3D* cpInitTran
+													, const CVector3D* cpInitLat)
+{
+	CDynObj* obj = m_pCved->CreateDynObj(name, eCV_VEHICLE, cAttr, cpInitPos, cpInitTran, cpInitLat);
+	TObjectPoolIdx id_local = obj->GetId();
+	m_mapLid2Gid[id_local] = id_global;
+	m_mapGid2Ado[id_global] = obj;
+}
+
+template<class TNetworkImpl>
+void CExternalObjectControlImpl<TNetworkImpl>::DeleteAdoStub(GlobalId id_global)
+{
+	std::map<GlobalId, CDynObj*>::iterator it = m_mapGid2Ado.find(id_global);
+	ASSERT(it != m_mapGid2Ado.end());
+	CDynObj* obj = (*it).second;
+	TObjectPoolIdx id_local = obj->GetId();
+	m_pCved->DeleteDynObj(obj);
+	m_mapGid2Ado.erase(it);
+	m_mapLid2Gid.erase(id_local);
+
+}
