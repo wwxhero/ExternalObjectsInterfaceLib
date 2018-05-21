@@ -1,18 +1,17 @@
 #include "stdafx.h"
 #include "LibExternalObjectIfNetwork.h"
+#include "VrlinkDisAdoCtrl.h"
+#include "VrlinkDisEdoCtrl.h"
 #include "ExternalControlImpl.h"
-CVED::IExternalObjectControl* CreateNetworkExternalObjectControl(BASETYPE t)
+CVED::IExternalObjectControl* CreateNetworkExternalObjectControl(IMPLE imple, TERMINAL t)
 {
 	CVED::IExternalObjectControl* p = NULL;
-	switch(t)
-	{
-		case IGCOMM:
-			p = new CExternalObjectControlImpl<CRealtimeNetworkDynamic>();
-			break;
-		case DISVRLINK:
-			p = new CExternalObjectControlImpl<CVrlinkDisDynamic>();
-			break;
-	}
+	if (imple == DISVRLINK && t == edo_controller)
+		p = new CExternalObjectControlImpl<CVrlinkDisEdoCtrl>();
+	else if (imple == DISVRLINK && t == edo_controller)
+		p = new CExternalObjectControlImpl<CVrlinkDisAdoCtrl>();
+	else
+		ASSERT(0); //out of support
 	return p;
 }
 

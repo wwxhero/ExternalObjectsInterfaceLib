@@ -13,10 +13,11 @@
  * Description: this class implements INetworkDynamic interface with vr-link DIS9 solution
 ******************************************************************************/
 #pragma once
+#include <map>
 #include "inetworkdynamic.h"
 #include "Clock.h"
-#include <map>
-
+#include "CustomPdu.h"
+#include "LibExternalObjectIfNetwork.h"
 
 class DtExerciseConn;
 class DtEntityPublisher;
@@ -24,7 +25,7 @@ class DtTopoView;
 class DtReflectedEntityList;
 union cvTObjState;
 struct cvTObjStateBuf;
-class CPduExtObj;
+
 
 class CVrlinkDisDynamic :
 	public INetworkDynamic
@@ -55,6 +56,24 @@ class CVrlinkDisDynamic :
         int extra;
 	} VrLinkConf;
 
+	typedef struct EntityProxy_tag
+	{
+		DtEntityPublisher* pub;
+		DtTopoView* view;
+	} EntityProxy;
+
+	typedef struct StateBuffer_tag
+	{
+		cvTObjStateBuf* sb;
+		bool updated;
+	} EntityStub;
+
+	typedef struct ProxyConn_tag
+	{
+		DtExerciseConn* cnn;
+		std::map<TObjectPoolIdx, EntityProxy> pubs;
+	} ProxyCnn;
+
 	typedef struct EntityPublisher_tag
 	{
 		DtExerciseConn* cnn;
@@ -62,33 +81,63 @@ class CVrlinkDisDynamic :
 		DtTopoView* view;
 	} EntityPublisher;
 
-	typedef struct StateBuffer_tag
-	{
-		cvTObjStateBuf* item;
-		bool updated;
-	} StateBuffer;
 
 public:
-	CVrlinkDisDynamic(void);
+	CVrlinkDisDynamic(TERMINAL type);
 	virtual ~CVrlinkDisDynamic(void);
 	virtual void NetworkInitialize(const std::list<IP>& sendTo, const std::list<IP>& receiveFrom, int port, IP self);
 	virtual void NetworkUninitialize();
 	virtual void PreDynaCalc();
-	virtual void Send(IP ip, const cvTObjStateBuf& sb);
-	virtual bool Receive(IP ip, const cvTObjStateBuf*& sb);
+	virtual void Send(IP ip, GlobalId id_global, const cvTObjStateBuf& sb);
+	virtual bool Receive(GlobalId id_global, const cvTObjStateBuf*& sb);
 	virtual void PostDynaCalc();
 private:
-	void DisSend(DtExerciseConn* cnn, EntityPublisher& pub, const cvTObjState* s);
-	static void OnReceiveRawPdu( CPduExtObj* pdu, void* pThis );
-private:
-	std::map<IP, EntityPublisher> m_sendersPub; //currently only 1 entity will publish from client
+	inline bool EntityPub(IP ip, GlobalId id_global, EntityPublisher& pub)
+	{
+		TObjectPoolIdx objId = id_global.objId;
+		std::map<IP, ProxyCnn>::iterator it_proxyCnn;
+		std::map<TObjectPoolIdx, EntityProxy>::iterator it_proxyPub;
+		if (m_proxyCnns.end() == (it_proxyCnn = m_proxyCnns.find(ip))
+			||  (*it_proxyCnn).second.pubs.end() == (it_proxyPub = (*it_proxyCnn).second.pubs.find(objId)))
+			return false;
+		else
+		{
+			pub.cnn = (*it_proxyCnn).second.cnn;
+			pub.pub = (*it_proxyPub).second.pub;
+			pub.view = (*it_proxyPub).second.view;
+			return true;
+		}
+	}
+	static void OnReceiveRawPdu( CCustomPdu* pdu, void* pThis );
+protected:
+	inline GlobalId VrlinkId2GlobalId(const DtObjectId& id)
+	{
+		GlobalId id_global;
+		short* ip_a = (short* )&id_global.owner;
+		ip_a[0] = id.site();
+		ip_a[1] = id.host();
+		id_global.objId = id.entityNum();
+		return id_global;
+	}
+
+	inline DtObjectId GlobalId2VrlinkId(GlobalId id_global)
+	{
+		short* id = (short*)&id_global.owner;
+		return DtObjectId(id[0], id[1], id_global.objId);
+	}
+protected:
+	std::map<IP, ProxyCnn> m_proxyCnns;
+	std::map<GlobalId, EntityStub> m_reciversStub;
 
 	DtExerciseConn* m_reciver;
 	DtReflectedEntityList* m_receivedEntities;
-	std::map<IP, StateBuffer> m_receivedStates;
 
 	static VrLinkConf s_disConf;
 	CClockStaticAln m_sysClk;
 	IP m_self;
+
+public:
+	const TERMINAL c_type;
+
 };
 

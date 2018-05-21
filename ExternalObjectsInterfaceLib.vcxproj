@@ -151,21 +151,29 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Clock.h" />
+    <ClInclude Include="CustomPdu.h" />
     <ClInclude Include="ExternalControlImpl.h" />
     <ClInclude Include="INetworkDynamic.h" />
     <ClInclude Include="LeftistHeap.h" />
     <ClInclude Include="LibExternalObjectIfNetwork.h" />
     <ClInclude Include="NetworkDynamicWin.h" />
+    <ClInclude Include="PduCrtAdo.h" />
+    <ClInclude Include="PduDelAdo.h" />
     <ClInclude Include="PduExtObj.h" />
     <ClInclude Include="RealtimeNetworkDynamic.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="utility.h" />
+    <ClInclude Include="VrlinkDisAdoCtrl.h" />
     <ClInclude Include="VrlinkDisDynamic.h" />
+    <ClInclude Include="VrlinkDisEdoCtrl.h" />
+    <ClInclude Include="vrlinkMath.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Clock.cpp" />
     <ClCompile Include="LibExternalObjectIfNetwork.cpp" />
+    <ClCompile Include="PduCrtAdo.cpp" />
+    <ClCompile Include="PduDelAdo.cpp" />
     <ClCompile Include="PduExtObj.cpp" />
     <ClCompile Include="RealtimeNetworkDynamic.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -175,7 +183,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="utility.cpp" />
+    <ClCompile Include="VrlinkDisAdoCtrl.cpp" />
     <ClCompile Include="VrlinkDisDynamic.cpp" />
+    <ClCompile Include="VrlinkDisEdoCtrl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\IgComm\IgComm.vcxproj">

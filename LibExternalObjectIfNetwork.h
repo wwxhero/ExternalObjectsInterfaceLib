@@ -3,8 +3,9 @@
 #define _LIBEXTERNALOBJECTIFNETWORK_H
 #include "ExternalControlInterface.h"
 
-enum BASETYPE {IGCOMM, DISVRLINK};
+enum IMPLE {IGCOMM, DISVRLINK};
+enum TERMINAL {edo_controller = 0, ado_controller};
 
-CVED::IExternalObjectControl* CreateNetworkExternalObjectControl(BASETYPE t);
+CVED::IExternalObjectControl* CreateNetworkExternalObjectControl(IMPLE p, TERMINAL t);
 void ReleaseNetworkExternalObjectControl(CVED::IExternalObjectControl* p);
 #endif

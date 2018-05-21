@@ -3,22 +3,22 @@
 #define __EXTERNAL_CONTROL_IMPL_H
 #include "ExternalControlInterface.h"
 #include "NetworkDynamicWin.h"
-#include "RealtimeNetworkDynamic.h"
-#include "VrlinkDisDynamic.h"
+
 
 template<class TNetworkImpl>
 class CExternalObjectControlImpl : public CVED::IExternalObjectControl
 								 , public CNetworkDynamicWin<TNetworkImpl>
 {
+
 public:
 	CExternalObjectControlImpl();
 	virtual ~CExternalObjectControlImpl();
 	virtual void PreUpdateDynamicModels();
 	virtual void PostUpdateDynamicModels();
-	virtual bool OnPeerSimUpdating(TObjectPoolIdx id, cvTObjContInp* curInput, cvTObjState* curState);
-	virtual void OnOwnSimUpdated(const cvTObjContInp* nextInput, const cvTObjState* nextState);
-	virtual bool Initialize(CHeaderDistriParseBlock& blk, CVED::CCved* pCved);
-	virtual void UnInitialize(CVED::CCved* pCved);
+	virtual bool OnGetUpdate(TObjectPoolIdx id_local, cvTObjContInp* curInput, cvTObjState* curState);
+	virtual void OnPushUpdate(TObjectPoolIdx id_local, const cvTObjContInp* nextInput, const cvTObjState* nextState);
+	virtual bool Initialize(CHeaderDistriParseBlock& blk, CVED::CCvedDistri* pCved);
+	virtual void UnInitialize();
 private:
 	typedef struct _SEG
 	{
@@ -32,14 +32,24 @@ private:
 	    }
 	} SEG;
 	void InitIpclusters(const std::list<SEG>& ips, std::list<IP>& clusters);
-	void BroadCastObj(const cvTObjStateBuf* sb);
-	static CVED::CDynObj* CreatePeerDriver(CHeaderDistriParseBlock& blk, CVED::CCved* pCved);
+	void BroadCastObj(TObjectPoolIdx id_local, const cvTObjStateBuf* sb);
+	static CVED::CDynObj* CreatePeerDriver(CHeaderDistriParseBlock& blk, CVED::CCved* cved, cvEObjType runAs);
+
+	virtual void CreateAdoStub(GlobalId id_global
+							, const std::string& name
+							, const cvTObjAttr& cAttr
+							, const CPoint3D* cpInitPos
+							, const CVector3D* cpInitTran
+							, const CVector3D* cpInitLat);
+	virtual void DeleteAdoStub(GlobalId id_global);
 private:
-	std::map<IP, int> m_mapIp2Id;
-	std::map<int, IP> m_mapId2Ip;
+	std::map<TObjectPoolIdx, GlobalId> m_mapLid2Gid;
+	std::map<GlobalId, CDynObj*> m_mapGid2Ado;
 
 	std::list<IP> m_ipClusters;
 	std::list<CVED::CDynObj*> m_lstPeers;
+	IP m_selfIp;
+	CVED::CCvedDistri* m_pCved;
 };
 
 #include "ExternalControlImpl.cpp"
