@@ -58,7 +58,6 @@ CVrlinkDisDynamic::CVrlinkDisDynamic(TERMINAL type)
 	: c_type(type)
 	, m_reciver(NULL)
 	, m_receivedEntities(NULL)
-	, m_pCved(NULL)
 {
 }
 

@@ -157,6 +157,8 @@
     <ClInclude Include="LeftistHeap.h" />
     <ClInclude Include="LibExternalObjectIfNetwork.h" />
     <ClInclude Include="NetworkDynamicWin.h" />
+    <ClInclude Include="PduCrtAdo.h" />
+    <ClInclude Include="PduDelAdo.h" />
     <ClInclude Include="PduExtObj.h" />
     <ClInclude Include="RealtimeNetworkDynamic.h" />
     <ClInclude Include="stdafx.h" />
@@ -170,6 +172,8 @@
   <ItemGroup>
     <ClCompile Include="Clock.cpp" />
     <ClCompile Include="LibExternalObjectIfNetwork.cpp" />
+    <ClCompile Include="PduCrtAdo.cpp" />
+    <ClCompile Include="PduDelAdo.cpp" />
     <ClCompile Include="PduExtObj.cpp" />
     <ClCompile Include="RealtimeNetworkDynamic.cpp" />
     <ClCompile Include="stdafx.cpp">

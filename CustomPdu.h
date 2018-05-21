@@ -5,7 +5,7 @@
 #include "INetworkDynamic.h"
 #include "hcsmobject.h"
 #include "cvedstrc.h"
-
+#define PDU_STRLEN 64
 class CCustomPdu;
 typedef void (*OnReceivePdu)( CCustomPdu* pdu, void* pThis);
 
@@ -16,7 +16,8 @@ public:
 	enum
 	{
 		ExtObjState = DtPduKind(221)
-		, OnCreateObj = DtPduKind(222)
+		, OnCrtAdo = DtPduKind(222)
+		, OnDelAdo = DtPduKind(223)
 	};
 	typedef struct _BuffUnit
 	{
@@ -49,7 +50,7 @@ protected:
 			TRawState mockS;
 			unsigned char* packBuffer = (unsigned char*)&mockS;
 			unsigned char* w = packBuffer;
-			for (int i = 0; i < num; i ++)
+			for (unsigned int i = 0; i < num; i ++)
 			{
 				BuffUnit u = units[i];
 				memcpy(w, u.addr, u.sz);

@@ -9,7 +9,7 @@ protected:
 	virtual void NetworkInitialize(const std::list<IP>& sendTo, const std::list<IP>& receiveFrom, int port, IP self);
 	virtual void NetworkUninitialize();
 
-	virtual CDynObj* CreateAdoStub(GlobalId id_global
+	virtual void CreateAdoStub(GlobalId id_global
 							, const std::string& name
 							, const cvTObjAttr& cAttr
 							, const CPoint3D* cpInitPos

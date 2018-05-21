@@ -14,7 +14,7 @@ typedef struct {
 	TObjectPoolIdx objId;
 } GlobalId;
 
-bool operator < (GlobalId id1, GlobalId id2)
+inline bool operator < (GlobalId id1, GlobalId id2)
 {
 	return id1.owner < id2.owner
 		|| (id1.owner == id2.owner && id1.objId < id2.objId);
