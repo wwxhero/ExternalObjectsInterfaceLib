@@ -125,7 +125,7 @@ protected:
 		short* id = (short*)&id_global.owner;
 		return DtObjectId(id[0], id[1], id_global.objId);
 	}
-private:
+protected:
 	std::map<IP, ProxyCnn> m_proxyCnns;
 	std::map<GlobalId, EntityStub> m_reciversStub;
 
@@ -138,5 +138,6 @@ private:
 
 public:
 	const TERMINAL c_type;
+
 };
 

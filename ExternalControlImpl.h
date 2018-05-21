@@ -34,8 +34,17 @@ private:
 	void InitIpclusters(const std::list<SEG>& ips, std::list<IP>& clusters);
 	void BroadCastObj(TObjectPoolIdx id_local, const cvTObjStateBuf* sb);
 	static CVED::CDynObj* CreatePeerDriver(CHeaderDistriParseBlock& blk, CVED::CCved* cved, cvEObjType runAs);
+
+	virtual void CreateAdoStub(GlobalId id_global
+							, const std::string& name
+							, const cvTObjAttr& cAttr
+							, const CPoint3D* cpInitPos
+							, const CVector3D* cpInitTran
+							, const CVector3D* cpInitLat);
+	virtual void DeleteAdoStub(GlobalId id_global);
 private:
 	std::map<TObjectPoolIdx, GlobalId> m_mapLid2Gid;
+	std::map<GlobalId, CDynObj*> m_mapGid2Ado;
 
 	std::list<IP> m_ipClusters;
 	std::list<CVED::CDynObj*> m_lstPeers;
