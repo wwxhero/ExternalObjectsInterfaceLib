@@ -17,8 +17,8 @@ public:
 	virtual void PostUpdateDynamicModels();
 	virtual bool OnGetUpdate(TObjectPoolIdx id_local, cvTObjContInp* curInput, cvTObjState* curState);
 	virtual void OnPushUpdate(TObjectPoolIdx id_local, const cvTObjContInp* nextInput, const cvTObjState* nextState);
-	virtual bool Initialize(CHeaderDistriParseBlock& blk, CVED::CCved* pCved);
-	virtual void UnInitialize(CVED::CCved* pCved);
+	virtual bool Initialize(CHeaderDistriParseBlock& blk, CVED::CCvedDistri* pCved);
+	virtual void UnInitialize();
 private:
 	typedef struct _SEG
 	{
@@ -40,6 +40,7 @@ private:
 	std::list<IP> m_ipClusters;
 	std::list<CVED::CDynObj*> m_lstPeers;
 	IP m_selfIp;
+	CVED::CCvedDistri* m_pCved;
 };
 
 #include "ExternalControlImpl.cpp"

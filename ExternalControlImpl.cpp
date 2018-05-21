@@ -3,9 +3,13 @@
 #include "headerparseblock.h"
 #include "roadpos.h"
 #include "utility.h"
+#include "cveddistri.h"
 
 template<class TNetworkImpl>
-CExternalObjectControlImpl<TNetworkImpl>::CExternalObjectControlImpl() : m_selfIp(0)
+CExternalObjectControlImpl<TNetworkImpl>::CExternalObjectControlImpl()
+	: m_pCved(NULL)
+	, m_selfIp(0)
+
 {
 }
 
@@ -314,7 +318,7 @@ CVED::CDynObj* CExternalObjectControlImpl<TNetworkImpl>::CreatePeerDriver(CHeade
 }
 
 template<class TNetworkImpl>
-bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBlock& hBlk, CVED::CCved* pCved)
+bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBlock& hBlk, CVED::CCvedDistri* pCved)
 {
 	std::set<IP> localhostIps;
 	GetLocalhostIps(localhostIps);
@@ -356,6 +360,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 	{
 		InitIpclusters(lstDistSegs, m_ipClusters);
 		NetworkInitialize(m_ipClusters, lstDistIps, hBlk.GetPort(), m_selfIp);
+		m_pCved = pCved;
 	}
 	return ok;
 }
@@ -400,13 +405,13 @@ void CExternalObjectControlImpl<TNetworkImpl>::InitIpclusters(const std::list<SE
 }
 
 template<class TNetworkImpl>
-void CExternalObjectControlImpl<TNetworkImpl>::UnInitialize(CVED::CCved* pCved)
+void CExternalObjectControlImpl<TNetworkImpl>::UnInitialize()
 {
 	NetworkUninitialize();
 	m_ipClusters.clear();
 	m_mapLid2Gid.clear();
 	for (std::list<CVED::CDynObj*>::iterator it = m_lstPeers.begin(); it != m_lstPeers.end(); it ++)
-		pCved->DeleteDynObj(*it);
+		m_pCved->DeleteDynObj(*it);
 	m_lstPeers.clear();
 
 }
