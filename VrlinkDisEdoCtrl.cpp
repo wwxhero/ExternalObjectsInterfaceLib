@@ -44,7 +44,7 @@ void CVrlinkDisEdoCtrl::NetworkInitialize(const std::list<IP>& sendTo, const std
 
 void CVrlinkDisEdoCtrl::NetworkUninitialize()
 {
-	CVrlinkDisDynamic::NetworkUninitialize();
 	CCustomPdu::StopListening<(DtPduKind)CCustomPdu::OnCrtAdo>(m_reciver, OnRequest4CreateAdo, this);
 	CCustomPdu::StopListening<(DtPduKind)CCustomPdu::OnDelAdo>(m_reciver, OnRequest4DeleteAdo, this);
+	CVrlinkDisDynamic::NetworkUninitialize();
 }
