@@ -17,6 +17,13 @@ public:
 	virtual void PostUpdateDynamicModels();
 	virtual bool OnGetUpdate(TObjectPoolIdx id_local, cvTObjContInp* curInput, cvTObjState* curState);
 	virtual void OnPushUpdate(TObjectPoolIdx id_local, const cvTObjContInp* nextInput, const cvTObjState* nextState);
+	virtual void OnCreateADO(TObjectPoolIdx id_local
+							, const char* szName
+							, const cvTObjAttr& cAttr
+							, const CPoint3D& pos
+							, const CVector3D& t
+							, const CVector3D& l);
+	virtual void OnDeleteADO(TObjectPoolIdx id_local);
 	virtual bool Initialize(CHeaderDistriParseBlock& blk, CVED::CCvedDistri* pCved);
 	virtual void UnInitialize();
 private:

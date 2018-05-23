@@ -17,12 +17,26 @@ void CVrlinkDisEdoCtrl::OnRequest4CreateAdo( CCustomPdu* pdu, void* p )
 	GlobalId id_global;
 	pduCrtAdo->getTuple(id_global, cName, attri, pt, t, l);
 	pThis->CreateAdoStub(id_global, cName, attri, &pt, &t, &l);
+
+	EntityStub& buf = pThis->m_reciversStub[id_global];
+	buf.updated = false;
+	buf.sb = new cvTObjStateBuf;
+	memset(buf.sb, 0, sizeof(cvTObjStateBuf));
 }
 void CVrlinkDisEdoCtrl::OnRequest4DeleteAdo( CCustomPdu* pdu, void* p )
 {
 	CPduDelAdo* pduDelAdo = static_cast<CPduDelAdo*>(pdu);
 	CVrlinkDisEdoCtrl* pThis = reinterpret_cast<CVrlinkDisEdoCtrl*>(p);
-	pThis->DeleteAdoStub(pduDelAdo->globalId());
+	GlobalId id_global = pduDelAdo->globalId();
+	pThis->DeleteAdoStub(id_global);
+
+	std::map<GlobalId, EntityStub>::iterator it = pThis->m_reciversStub.find(id_global);
+	if (it != pThis->m_reciversStub.end())
+	{
+		EntityStub buf = it->second;
+		delete buf.sb;
+		pThis->m_reciversStub.erase(it);
+	}
 }
 
 CVrlinkDisEdoCtrl::CVrlinkDisEdoCtrl(void) : CVrlinkDisDynamic(edo_controller)
@@ -44,7 +58,7 @@ void CVrlinkDisEdoCtrl::NetworkInitialize(const std::list<IP>& sendTo, const std
 
 void CVrlinkDisEdoCtrl::NetworkUninitialize()
 {
-	CVrlinkDisDynamic::NetworkUninitialize();
 	CCustomPdu::StopListening<(DtPduKind)CCustomPdu::OnCrtAdo>(m_reciver, OnRequest4CreateAdo, this);
 	CCustomPdu::StopListening<(DtPduKind)CCustomPdu::OnDelAdo>(m_reciver, OnRequest4DeleteAdo, this);
+	CVrlinkDisDynamic::NetworkUninitialize();
 }

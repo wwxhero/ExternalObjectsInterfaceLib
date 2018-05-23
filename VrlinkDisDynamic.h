@@ -30,6 +30,7 @@ struct cvTObjStateBuf;
 class CVrlinkDisDynamic :
 	public INetworkDynamic
 {
+protected:
 	typedef struct VrLinkConf_tag
 	{
 		int drAlgor;

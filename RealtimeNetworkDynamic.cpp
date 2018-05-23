@@ -205,7 +205,7 @@ bool CRealtimeNetworkDynamic::Receive(IP ip, const cvTObjStateBuf*& sb)
 	SQNObjSb* sq = m_mapIp2Qb[ip];
 	assert(NULL != sq);
 	CLocker l(*sq);
-	QNObjSb* queue = l.Lock(); //todo: it can be modified to Lock(milliseconds) to improve the better visual experience
+	QNObjSb* queue = l.Lock(); //it can be modified to Lock(milliseconds) to improve the better visual experience
 	if (NULL == queue
 		|| queue->empty())
 		return false;

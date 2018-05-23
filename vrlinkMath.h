@@ -44,7 +44,7 @@ inline double rad2deg(double r)
 
 inline void Frame2TaitBryan(const TVector3D& tangent, const TVector3D& lateral, const TVector3D& tangent_prime, const TVector3D& lateral_prime, DtTaitBryan& ori)
 {
-	//todo: generate tait-bryan euler angle from [t,l,b] to [t', l', b']
+	//generate tait-bryan euler angle from [t,l,b] to [t', l', b']
 	glm::dvec3 t(tangent.i, tangent.j, tangent.k);
 	glm::dvec3 l(lateral.i, lateral.j, lateral.k);
 	glm::dvec3 b = glm::cross(t, l);

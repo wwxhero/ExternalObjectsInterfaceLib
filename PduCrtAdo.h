@@ -14,11 +14,12 @@ public:
 		CVector3D lat;
 	};
 public:
-	CPduCrtAdo(GlobalId id_global, std::string& name, cvTObjAttr& attri, CPoint3D& pt, CVector3D& tan, CVector3D& lat) : CCustomPdu((DtPduKind)OnCrtAdo)
+	CPduCrtAdo(GlobalId id_global, const char* szName, const cvTObjAttr& attri, const CPoint3D& pt, const CVector3D& tan, const CVector3D& lat)
+		: CCustomPdu((DtPduKind)OnCrtAdo)
 	{
 		m_tuple.id = id_global;
 		char * p_d = m_tuple.name;
-		for (const char* p_s = name.c_str()
+		for (const char* p_s = szName
 			; *p_s != '\0' && p_d - m_tuple.name < PDU_STRLEN-1
 			; p_s ++, p_d ++)
 			*p_d = *p_s;
