@@ -8,7 +8,7 @@ CVED::IExternalObjectControl* CreateNetworkExternalObjectControl(IMPLE imple, TE
 	CVED::IExternalObjectControl* p = NULL;
 	if (imple == DISVRLINK && t == edo_controller)
 		p = new CExternalObjectControlImpl<CVrlinkDisEdoCtrl>();
-	else if (imple == DISVRLINK && t == edo_controller)
+	else if (imple == DISVRLINK && t == ado_controller)
 		p = new CExternalObjectControlImpl<CVrlinkDisAdoCtrl>();
 	else
 		ASSERT(0); //out of support

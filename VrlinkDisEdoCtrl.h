@@ -17,6 +17,19 @@ protected:
 							, const CVector3D* cpInitLat) = 0;
 	virtual void DeleteAdoStub(GlobalId id_global) = 0;
 
+	virtual void Notify_OnNewAdo(GlobalId id
+							, const char* szName
+							, const cvTObjAttr& cAttr
+							, const CPoint3D& pos
+							, const CVector3D& t
+							, const CVector3D& l)
+	{
+		//EDO controllor does not notify for creating an ado
+	}
+	virtual void Notify_OnDelAdo(GlobalId id)
+	{
+		//EDO controller does not notify for deleting an ado
+	}
 private:
 	static void OnRequest4CreateAdo( CCustomPdu* pdu, void* pThis );
 	static void OnRequest4DeleteAdo( CCustomPdu* pdu, void* pThis );

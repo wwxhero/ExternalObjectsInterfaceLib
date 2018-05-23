@@ -4,6 +4,7 @@
 #include <set>
 #include <list>
 #include "cveddecl.h"
+#include "objlayout.h"
 typedef unsigned long IP;
 struct cvTObjStateBuf;
 //the implementation of this interface should maintain a queue datastructure for each IP contains received data
@@ -27,6 +28,13 @@ public:
 	virtual void PreDynaCalc() = 0;
 	virtual void Send(IP ip, GlobalId id_global, const cvTObjStateBuf& sb) = 0;
 	virtual bool Receive(GlobalId id_global, const cvTObjStateBuf*& sb) = 0;
+	virtual void Notify_OnNewAdo(GlobalId id
+							, const char* szName
+							, const cvTObjAttr& cAttr
+							, const CPoint3D& pos
+							, const CVector3D& t
+							, const CVector3D& l) = 0;
+	virtual void Notify_OnDelAdo(GlobalId id) = 0;
 	virtual void PostDynaCalc() = 0;
 	virtual void GetLocalhostIps(std::set<IP>& setIps) = 0;
 };

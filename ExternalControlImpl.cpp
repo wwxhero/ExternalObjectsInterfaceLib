@@ -334,7 +334,9 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 		IP simIP = inet_addr(ipStr.c_str());
 		IP simMask = inet_addr(ipMask.c_str());
 		bool localhostip = (localhostIps.end() != localhostIps.find(simIP));
-		if (!localhostip)
+		bool peerEdoBlk = (edo_controller == hBlk.GetType()
+						&& (edo_controller != c_type || !localhostip));
+		if (peerEdoBlk)
 		{
 			SEG seg = {simIP, simMask};
 			lstDistSegs.push_back(seg);
@@ -345,13 +347,15 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 			GlobalId id_global = {simIP, 0};
 			m_mapLid2Gid.insert(std::pair<TObjectPoolIdx, GlobalId>(id_local, id_global));
 		}
-		else
+
+		if (localhostip
+			&& c_type == hBlk.GetType())
 		{
 			m_selfIp = simIP;
 			hBlk.TagLocalhost();
 			numSelf ++;
 		}
-	}while (hBlk.NextExternalBlk());
+	} while (hBlk.NextExternalBlk());
 
 	bool ok = (numSelf == 1);
 	if (ok)
@@ -464,5 +468,23 @@ void CExternalObjectControlImpl<TNetworkImpl>::DeleteAdoStub(GlobalId id_global)
 	m_pCved->DeleteDynObj(obj);
 	m_mapGid2Ado.erase(it);
 	m_mapLid2Gid.erase(id_local);
+}
 
+template<class TNetworkImpl>
+void CExternalObjectControlImpl<TNetworkImpl>::OnCreateADO(TObjectPoolIdx id_local
+							, const char* szName
+							, const cvTObjAttr& cAttr
+							, const CPoint3D& pos
+							, const CVector3D& t
+							, const CVector3D& l)
+{
+	GlobalId id = {m_selfIp, id_local};
+	TNetworkImpl::Notify_OnNewAdo(id, szName, cAttr, pos, t, l);
+}
+
+template<class TNetworkImpl>
+void CExternalObjectControlImpl<TNetworkImpl>::OnDeleteADO(TObjectPoolIdx id_local)
+{
+	GlobalId id = {m_selfIp, id_local};
+	TNetworkImpl::Notify_OnDelAdo(id);
 }
