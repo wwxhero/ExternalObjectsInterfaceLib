@@ -13,6 +13,7 @@ public:
 	CPduDelAdo(GlobalId id_global) : CCustomPdu((DtPduKind)OnDelAdo)
 	{
 		m_state.id = id_global;
+		Update(true);
 	}
 	virtual ~CPduDelAdo(void);
 	GlobalId globalId()

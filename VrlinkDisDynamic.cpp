@@ -287,7 +287,10 @@ void CVrlinkDisDynamic::PreDynaCalc()
 	for(; e != NULL; e = e->next())
 	{
 		const DtObjectId& id = e->entityId();
-		std::map<GlobalId, EntityStub>::iterator it = m_reciversStub.find(VrlinkId2GlobalId(id));
+		GlobalId id_global = VrlinkId2GlobalId(id);
+		unsigned char* ip = (unsigned char*)&id_global.owner;
+		TRACE(TEXT("vrlink: received from [%d.%d.%d.%d]\n"), ip[0], ip[1], ip[2], ip[3]);
+		std::map<GlobalId, EntityStub>::iterator it = m_reciversStub.find(id_global);
 		if (m_reciversStub.end() == it) //rejects unrecognizable connections
 			continue;
 

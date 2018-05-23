@@ -486,6 +486,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnCreateADO(TObjectPoolIdx id_loc
 {
 	GlobalId id = {m_selfIp, id_local};
 	TNetworkImpl::Notify_OnNewAdo(id, szName, cAttr, pos, t, l);
+	TRACE(TEXT("ADO Ctrl: Create ADO %d\n"), id_local);
 }
 
 template<class TNetworkImpl>
@@ -493,4 +494,5 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnDeleteADO(TObjectPoolIdx id_loc
 {
 	GlobalId id = {m_selfIp, id_local};
 	TNetworkImpl::Notify_OnDelAdo(id);
+	TRACE(TEXT("ADO Ctrl: Delete ADO %d\n"), id_local);
 }

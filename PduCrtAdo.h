@@ -28,6 +28,7 @@ public:
 		m_tuple.pt = pt;
 		m_tuple.tan = tan;
 		m_tuple.lat = lat;
+		Update(true);
 	}
 	virtual ~CPduCrtAdo(void);
 	void getTuple(GlobalId& id_global, std::string& name, cvTObjAttr& attri, CPoint3D& pt, CVector3D& tan, CVector3D& lat)
