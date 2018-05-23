@@ -321,8 +321,8 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 	std::set<IP> localhostIps;
 	GetLocalhostIps(localhostIps);
 
-	std::list<SEG> lstDistSegs;
-	std::list<IP> lstDistIps;
+	std::list<SEG> lstNeighborSegs;
+	std::list<IP> lstNeighborIps;
 	int id_local = 0; //cved object id
 	int numSelf = 0;
 	//edo_controller, ado_controller
@@ -333,14 +333,21 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 		std::string ipMask = hBlk.GetIPMask();
 		IP simIP = inet_addr(ipStr.c_str());
 		IP simMask = inet_addr(ipMask.c_str());
-		bool localhostip = (localhostIps.end() != localhostIps.find(simIP));
+		bool selfBlk = (localhostIps.end() != localhostIps.find(simIP))
+						&& c_type == hBlk.GetType();
+		bool neighborBlk = !selfBlk;
 		bool peerEdoBlk = (edo_controller == hBlk.GetType()
-						&& (edo_controller != c_type || !localhostip));
-		if (peerEdoBlk)
+						&& (edo_controller != c_type || !selfBlk));
+
+		if (neighborBlk)
 		{
 			SEG seg = {simIP, simMask};
-			lstDistSegs.push_back(seg);
-			lstDistIps.push_back(simIP);
+			lstNeighborSegs.push_back(seg);
+			lstNeighborIps.push_back(simIP);
+		}
+
+		if (peerEdoBlk)
+		{
 			CVED::CDynObj* peerObj = CreatePeerDriver(hBlk, pCved, objTypes[c_type]);
 			id_local = peerObj->GetId();
 			m_lstPeers.push_back(peerObj);
@@ -348,8 +355,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 			m_mapLid2Gid.insert(std::pair<TObjectPoolIdx, GlobalId>(id_local, id_global));
 		}
 
-		if (localhostip
-			&& c_type == hBlk.GetType())
+		if (selfBlk)
 		{
 			m_selfIp = simIP;
 			hBlk.TagLocalhost();
@@ -360,8 +366,8 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 	bool ok = (numSelf == 1);
 	if (ok)
 	{
-		InitIpclusters(lstDistSegs, m_ipClusters);
-		NetworkInitialize(m_ipClusters, lstDistIps, hBlk.GetPort(), m_selfIp);
+		InitIpclusters(lstNeighborSegs, m_ipClusters);
+		NetworkInitialize(m_ipClusters, lstNeighborIps, hBlk.GetPort(), m_selfIp);
 		m_pCved = pCved;
 	}
 	return ok;
