@@ -47,9 +47,13 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdate(TObjectPoolIdx id_loc
 		, TEXT("Received")
 	};
 	int idx = recieved? 1: 0;
-	TRACE(TEXT("PreUpdating %s id:%d, [%E,%E,%E], [%E,%E,%E]\n"), recFlag[idx], id_local,
-									curState->anyState.position.x, curState->anyState.position.y, curState->anyState.position.z,
-									curState->anyState.tangent.i, curState->anyState.tangent.j, curState->anyState.tangent.k);
+	TRACE(TEXT("OnGetUpdate %s id:%d, \n\t position: [%E,%E,%E]")
+								TEXT("\n\t tangent: [%E,%E,%E]")
+								TEXT("\n\t lateral: [%E,%E,%E]")
+									, recFlag[idx], id_local
+									, curState->anyState.position.x, curState->anyState.position.y, curState->anyState.position.z
+									, curState->anyState.tangent.i, curState->anyState.tangent.j, curState->anyState.tangent.k
+									, curState->anyState.lateral.i, curState->anyState.lateral.j, curState->anyState.lateral.k );
 	return recieved;
 }
 
@@ -321,8 +325,8 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 	std::set<IP> localhostIps;
 	GetLocalhostIps(localhostIps);
 
-	std::list<SEG> lstNeighborSegs;
-	std::list<IP> lstNeighborIps;
+	std::list<SEG> neighborsTo;
+	std::list<IP> neighborsFrom;
 	int id_local = 0; //cved object id
 	int numSelf = 0;
 	//edo_controller, ado_controller
@@ -342,8 +346,8 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 		if (neighborBlk)
 		{
 			SEG seg = {simIP, simMask};
-			lstNeighborSegs.push_back(seg);
-			lstNeighborIps.push_back(simIP);
+			neighborsTo.push_back(seg);
+			neighborsFrom.push_back(simIP);
 		}
 
 		if (peerEdoBlk)
@@ -366,8 +370,8 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 	bool ok = (numSelf == 1);
 	if (ok)
 	{
-		InitIpclusters(lstNeighborSegs, m_ipClusters);
-		NetworkInitialize(m_ipClusters, lstNeighborIps, hBlk.GetPort(), m_selfIp);
+		InitIpclusters(neighborsTo, m_ipClusters);
+		NetworkInitialize(m_ipClusters, neighborsFrom, hBlk.GetPort(), m_selfIp);
 		m_pCved = pCved;
 	}
 	return ok;
@@ -462,6 +466,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::CreateAdoStub(GlobalId id_global
 	TObjectPoolIdx id_local = obj->GetId();
 	m_mapLid2Gid[id_local] = id_global;
 	m_mapGid2Ado[id_global] = obj;
+	TRACE(TEXT("EDO Ctrl: Create ADO %d\n"), id_local);
 }
 
 template<class TNetworkImpl>
@@ -474,6 +479,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::DeleteAdoStub(GlobalId id_global)
 	m_pCved->DeleteDynObj(obj);
 	m_mapGid2Ado.erase(it);
 	m_mapLid2Gid.erase(id_local);
+	TRACE(TEXT("EDO Ctrl: Delete ADO %d\n"), id_local);
 }
 
 template<class TNetworkImpl>

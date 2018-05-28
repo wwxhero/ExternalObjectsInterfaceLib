@@ -2,6 +2,7 @@
 #include "VrlinkDisEdoCtrl.h"
 #include "PduCrtAdo.h"
 #include "PduDelAdo.h"
+#include "utility.h"
 
 
 void CVrlinkDisEdoCtrl::OnRequest4CreateAdo( CCustomPdu* pdu, void* p )
@@ -31,9 +32,10 @@ void CVrlinkDisEdoCtrl::OnRequest4DeleteAdo( CCustomPdu* pdu, void* p )
 	pThis->DeleteAdoStub(id_global);
 
 	std::map<GlobalId, EntityStub>::iterator it = pThis->m_reciversStub.find(id_global);
+	ASSERT(it != pThis->m_reciversStub.end());
 	if (it != pThis->m_reciversStub.end())
 	{
-		EntityStub buf = it->second;
+		EntityStub& buf = it->second;
 		delete buf.sb;
 		pThis->m_reciversStub.erase(it);
 	}
