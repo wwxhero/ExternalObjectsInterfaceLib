@@ -57,23 +57,23 @@ protected:
         int extra;
 	} VrLinkConf;
 
-	typedef struct EntityProxy_tag
+	typedef struct EntityPub_tag
 	{
 		DtEntityPublisher* pub;
 		DtTopoView* view;
-	} EntityProxy;
+	} EntityPub;
 
 	typedef struct StateBuffer_tag
 	{
 		cvTObjStateBuf* sb;
 		bool updated;
-	} EntityStub;
+	} EntityState;
 
-	typedef struct ProxyConn_tag
+	typedef struct CnnOut_tag
 	{
 		DtExerciseConn* cnn;
-		std::map<TObjectPoolIdx, EntityProxy> pubs;
-	} ProxyCnn;
+		std::map<TObjectPoolIdx, EntityPub> pubs;
+	} CnnOut;
 
 	typedef struct EntityPublisher_tag
 	{
@@ -93,19 +93,19 @@ public:
 	virtual bool Receive(GlobalId id_global, const cvTObjStateBuf*& sb);
 	virtual void PostDynaCalc();
 private:
-	inline bool EntityPub(IP ip, GlobalId id_global, EntityPublisher& pub)
+	inline bool getEntityPub(IP ip, GlobalId id_global, EntityPublisher& pub)
 	{
 		TObjectPoolIdx objId = id_global.objId;
-		std::map<IP, ProxyCnn>::iterator it_proxyCnn;
-		std::map<TObjectPoolIdx, EntityProxy>::iterator it_proxyPub;
-		if (m_proxyCnns.end() == (it_proxyCnn = m_proxyCnns.find(ip))
-			||  (*it_proxyCnn).second.pubs.end() == (it_proxyPub = (*it_proxyCnn).second.pubs.find(objId)))
+		std::map<IP, CnnOut>::iterator it_cnnOut;
+		std::map<TObjectPoolIdx, EntityPub>::iterator it_pub;
+		if (m_cnnsOut.end() == (it_cnnOut = m_cnnsOut.find(ip))
+			||  (*it_cnnOut).second.pubs.end() == (it_pub = (*it_cnnOut).second.pubs.find(objId)))
 			return false;
 		else
 		{
-			pub.cnn = (*it_proxyCnn).second.cnn;
-			pub.pub = (*it_proxyPub).second.pub;
-			pub.view = (*it_proxyPub).second.view;
+			pub.cnn = (*it_cnnOut).second.cnn;
+			pub.pub = (*it_pub).second.pub;
+			pub.view = (*it_pub).second.view;
 			return true;
 		}
 	}
@@ -127,11 +127,11 @@ protected:
 		return DtObjectId(id[0], id[1], id_global.objId);
 	}
 protected:
-	std::map<IP, ProxyCnn> m_proxyCnns;
-	std::map<GlobalId, EntityStub> m_reciversStub;
+	std::map<IP, CnnOut> m_cnnsOut;
+	std::map<GlobalId, EntityState> m_statesIn;
 
-	DtExerciseConn* m_reciver;
-	DtReflectedEntityList* m_receivedEntities;
+	DtExerciseConn* m_cnnIn;
+	DtReflectedEntityList* m_entitiesIn;
 
 	static VrLinkConf s_disConf;
 	CClockStaticAln m_sysClk;

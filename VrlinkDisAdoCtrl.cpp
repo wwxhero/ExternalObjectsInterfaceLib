@@ -40,23 +40,23 @@ void CVrlinkDisAdoCtrl::Notify_OnNewAdo(GlobalId id_global
 		s_disConf.country, s_disConf.category, s_disConf.subCategory, s_disConf.specific, s_disConf.extra);
 	DtObjectId id_vrlink = GlobalId2VrlinkId(id_global);
 
-	for (std::map<IP, ProxyCnn>::iterator it = m_proxyCnns.begin()
-		; it != m_proxyCnns.end()
+	for (std::map<IP, CnnOut>::iterator it = m_cnnsOut.begin()
+		; it != m_cnnsOut.end()
 		; it ++)
 	{
-		ProxyCnn& proxy = it->second;
-		proxy.cnn->sendStamped(crtAdo);
+		CnnOut& out = it->second;
+		out.cnn->sendStamped(crtAdo);
 
-		DtEntityPublisher* pub = new DtEntityPublisher(f18Type, proxy.cnn
+		DtEntityPublisher* pub = new DtEntityPublisher(f18Type, out.cnn
 				, (DtDeadReckonTypes)s_disConf.drAlgor, DtForceFriendly
 				, DtEntityPublisher::guiseSameAsType(), id_vrlink);
 		DtEntityStateRepository* esr = pub->entityStateRep();
 		DtTopoView* view = new DtTopoView(esr, s_disConf.latitude, s_disConf.longitude);
 		view->setOrientation(DtTaitBryan(s_disConf.viewOriPsi, s_disConf.viewOriTheta, s_disConf.viewOriPhi));
 
-		EntityProxy proxyEntity = {pub, view};
+		EntityPub epb = {pub, view};
 
-		proxy.pubs[id_global.objId] = proxyEntity;
+		out.pubs[id_global.objId] = epb;
 	}
 }
 
@@ -64,20 +64,20 @@ void CVrlinkDisAdoCtrl::Notify_OnNewAdo(GlobalId id_global
 void CVrlinkDisAdoCtrl::Notify_OnDelAdo(GlobalId id_global)
 {
 	CPduDelAdo delAdo(id_global);
-	for (std::map<IP, ProxyCnn>::iterator it = m_proxyCnns.begin()
-		; it != m_proxyCnns.end()
-		; it ++)
+	for (std::map<IP, CnnOut>::iterator itCnn = m_cnnsOut.begin()
+		; itCnn != m_cnnsOut.end()
+		; itCnn ++)
 	{
-		ProxyCnn& proxy = it->second;
-		proxy.cnn->sendStamped(delAdo);
+		CnnOut& out = itCnn->second;
+		out.cnn->sendStamped(delAdo);
 
-		std::map<TObjectPoolIdx, EntityProxy>::iterator itProxyEntity = proxy.pubs.find(id_global.objId);
-		if (itProxyEntity != proxy.pubs.end())
+		std::map<TObjectPoolIdx, EntityPub>::iterator itPub = out.pubs.find(id_global.objId);
+		if (itPub != out.pubs.end())
 		{
-			EntityProxy& proxyEntity = itProxyEntity->second;
-			delete proxyEntity.view;
-			delete proxyEntity.pub;
-			proxy.pubs.erase(itProxyEntity);
+			EntityPub& epb = itPub->second;
+			delete epb.view;
+			delete epb.pub;
+			out.pubs.erase(itPub);
 		}
 	}
 }

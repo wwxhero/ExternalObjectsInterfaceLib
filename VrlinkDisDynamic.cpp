@@ -56,8 +56,8 @@ CVrlinkDisDynamic::VrLinkConf CVrlinkDisDynamic::s_disConf = {
 
 CVrlinkDisDynamic::CVrlinkDisDynamic(TERMINAL type)
 	: c_type(type)
-	, m_reciver(NULL)
-	, m_receivedEntities(NULL)
+	, m_cnnIn(NULL)
+	, m_entitiesIn(NULL)
 {
 }
 
@@ -77,11 +77,14 @@ void CVrlinkDisDynamic::NetworkInitialize(const std::list<IP>& sendTo, const std
 	sInit.setUseAsynchIO(true);
 	sInit.setDisVersionToSend(7);
 	sInit.setTimeStampType((DtTimeStampType)s_disConf.stmType);
+	char ipStrSelf[16] = {0};
+	sprintf(ipStrSelf, "%u.%u.%u.%u", self[0], self[1], self[2], self[3]); //fixme: this works only for little endian structure
+	sInit.setDeviceAddress(ipStrSelf);
 	DtThresholder::setDfltTranslationThreshold(s_disConf.translationThreshold);
 	DtThresholder::setDfltRotationThreshold(s_disConf.rotationThreshold);
 	DtEntityType f18Type(s_disConf.kind, s_disConf.domain,
 		s_disConf.country, s_disConf.category, s_disConf.subCategory, s_disConf.specific, s_disConf.extra);
-	GlobalId id_global_proxy = {self, 0};
+	GlobalId id_global_self = {self, 0};
 	char ipStr[16] = {0};
 	for (std::list<IP>::const_iterator it = sendTo.begin()
 		; it != sendTo.end()
@@ -89,13 +92,13 @@ void CVrlinkDisDynamic::NetworkInitialize(const std::list<IP>& sendTo, const std
 	{
 		IP ip = *it;
 		unsigned char* seg = (unsigned char*) &ip;
-		sprintf(ipStr, "%u.%u.%u.%u", seg[0], seg[1], seg[2], seg[3]);//fixme: this works only for little endian structure
+		sprintf(ipStr, "%u.%u.%u.%u", seg[0], seg[1], seg[2], seg[3]); //fixme: this works only for little endian structure
 		sInit.setDestinationAddress(ipStr);
 		DtExerciseConn* cnn = new DtExerciseConn(sInit, &status);
 		ASSERT(DtExerciseConn::DtINIT_SUCCESS == status);
 		DtEntityPublisher* pub = new DtEntityPublisher(f18Type, cnn
 			, (DtDeadReckonTypes)s_disConf.drAlgor, DtForceFriendly
-			, DtEntityPublisher::guiseSameAsType(), GlobalId2VrlinkId(id_global_proxy));
+			, DtEntityPublisher::guiseSameAsType(), GlobalId2VrlinkId(id_global_self));
 		DtEntityStateRepository* esr = pub->entityStateRep();
 		DtTopoView* view = new DtTopoView(esr, s_disConf.latitude, s_disConf.longitude);
 		view->setOrientation(DtTaitBryan(s_disConf.viewOriPsi, s_disConf.viewOriTheta, s_disConf.viewOriPhi));
@@ -103,11 +106,11 @@ void CVrlinkDisDynamic::NetworkInitialize(const std::list<IP>& sendTo, const std
 		DtClock* clk = cnn->clock();
 		clk->init();
 
-		ProxyCnn& ep = m_proxyCnns[ip];
-		ep.cnn = cnn;
+		CnnOut& out = m_cnnsOut[ip];
+		out.cnn = cnn;
 
-		EntityProxy proxy = {pub, view};
-		ep.pubs[0] = proxy;
+		EntityPub epb = {pub, view};
+		out.pubs[0] = epb;
 	}
 
 	//initialize for receiver
@@ -115,60 +118,47 @@ void CVrlinkDisDynamic::NetworkInitialize(const std::list<IP>& sendTo, const std
 	rInit.setUseAsynchIO(true);
 	rInit.setDisVersionToSend(7);
 	rInit.setTimeStampType((DtTimeStampType)s_disConf.stmType);
-	unsigned char* seg = (unsigned char*) &self;
-	sprintf(ipStr, "%u.%u.%u.%u", seg[0], seg[1], seg[2], seg[3]); //fixme: this works only for little endian structure
-	rInit.setDeviceAddress(ipStr);
+	rInit.setDeviceAddress(ipStrSelf);
 
-	m_reciver = new DtExerciseConn(rInit, &status);
+	m_cnnIn = new DtExerciseConn(rInit, &status);
 	ASSERT(DtExerciseConn::DtINIT_SUCCESS == status);
-	m_receivedEntities = new DtReflectedEntityList(m_reciver);
-	DtClock* clk = m_reciver->clock();
+	m_entitiesIn = new DtReflectedEntityList(m_cnnIn);
+	DtClock* clk = m_cnnIn->clock();
 	clk->init();
-	CCustomPdu::StartListening<CPduExtObj, (DtPduKind)CCustomPdu::ExtObjState>(m_reciver, OnReceiveRawPdu, this);
+	CCustomPdu::StartListening<CPduExtObj, (DtPduKind)CCustomPdu::ExtObjState>(m_cnnIn, OnReceiveRawPdu, this);
 
-	for (std::list<IP>::const_iterator it = receiveFrom.begin()
-		; it != receiveFrom.end()
-		; it ++)
-	{
-		IP ip = *it;
-		GlobalId id_global_stub = {ip, 0};
-		EntityStub& buf = m_reciversStub[id_global_stub];
-		buf.updated = false;
-		buf.sb = new cvTObjStateBuf;
-		memset(buf.sb, 0, sizeof(cvTObjStateBuf));
-	}
 	m_self = self;
 }
 
 void CVrlinkDisDynamic::NetworkUninitialize()
 {
-	for (std::map<IP, ProxyCnn>::iterator it_proxyCnn = m_proxyCnns.begin()
-		; it_proxyCnn != m_proxyCnns.end()
-		; it_proxyCnn ++)
+	for (std::map<IP, CnnOut>::iterator it_OutCnn = m_cnnsOut.begin()
+		; it_OutCnn != m_cnnsOut.end()
+		; it_OutCnn ++)
 	{
-		std::pair<IP, ProxyCnn> p = *it_proxyCnn;
+		std::pair<IP, CnnOut> p = *it_OutCnn;
 		DtExerciseConn* cnn = p.second.cnn;
-		for (std::map<TObjectPoolIdx, EntityProxy>::iterator it_pub = p.second.pubs.begin()
+		for (std::map<TObjectPoolIdx, EntityPub>::iterator it_pub = p.second.pubs.begin()
 			; it_pub != p.second.pubs.end()
 			; it_pub ++)
 		{
-			EntityProxy proxyEntity = (*it_pub).second;
-			delete proxyEntity.view;
-			delete proxyEntity.pub;
+			EntityPub epb = (*it_pub).second;
+			delete epb.view;
+			delete epb.pub;
 		}
 		delete cnn;
 	}
 
-	delete m_receivedEntities;
-	CCustomPdu::StopListening<(DtPduKind)CCustomPdu::ExtObjState>(m_reciver, OnReceiveRawPdu, this);
-	delete m_reciver;
+	delete m_entitiesIn;
+	CCustomPdu::StopListening<(DtPduKind)CCustomPdu::ExtObjState>(m_cnnIn, OnReceiveRawPdu, this);
+	delete m_cnnIn;
 
-	for (std::map<GlobalId, EntityStub>::iterator it = m_reciversStub.begin()
-		; it != m_reciversStub.end()
+	for (std::map<GlobalId, EntityState>::iterator it = m_statesIn.begin()
+		; it != m_statesIn.end()
 		; it ++)
 	{
-		std::pair<GlobalId, EntityStub> p = *it;
-		EntityStub b = p.second;
+		std::pair<GlobalId, EntityState> p = *it;
+		EntityState b = p.second;
 		delete b.sb;
 	}
 
@@ -179,11 +169,19 @@ void CVrlinkDisDynamic::OnReceiveRawPdu( CCustomPdu* pdu, void* p)
 	CVrlinkDisDynamic* pThis = reinterpret_cast<CVrlinkDisDynamic*>(p);
 	CPduExtObj* pExtObj = static_cast<CPduExtObj*>(pdu);
 	const CPduExtObj::RawState& rs = pExtObj->GetState();
-	std::map<GlobalId, EntityStub>::iterator it = pThis->m_reciversStub.find(rs.id);
-	if (pThis->m_reciversStub.end() == it) //rejects unrecognizable connections
-		return;
-	EntityStub& esb = (*it).second;
-	cvTObjState::ExternalDriverState& s = esb.sb->state.externalDriverState;
+	std::map<GlobalId, EntityState>::iterator it = pThis->m_statesIn.find(rs.id);
+	EntityState* esb = NULL;
+	if (pThis->m_statesIn.end() == it) //no state slot allocated in statesIn buffer
+	{
+		EntityState& state = pThis->m_statesIn[rs.id];
+		state.updated = false;
+		state.sb = new cvTObjStateBuf;
+		memset(state.sb, 0, sizeof(cvTObjStateBuf));
+		esb = &state;
+	}
+	else
+		esb = &(*it).second;
+	cvTObjState::ExternalDriverState& s = esb->sb->state.externalDriverState;
 	s.visualState = rs.visualState;
 	s.audioState = rs.audioState;
 	s.suspStif = rs.suspStif;
@@ -193,6 +191,7 @@ void CVrlinkDisDynamic::OnReceiveRawPdu( CCustomPdu* pdu, void* p)
 	s.velBrake = rs.velBrake;
 	memcpy(s.posHint, rs.posHint, sizeof(rs.posHint));
 	s.dynaFidelity = rs.dynaFidelity;
+	esb->updated = true;
 #ifdef _DEBUG
 	pExtObj->printData();
 #endif
@@ -201,7 +200,7 @@ void CVrlinkDisDynamic::OnReceiveRawPdu( CCustomPdu* pdu, void* p)
 void CVrlinkDisDynamic::Send(IP ip, GlobalId id_global, const cvTObjStateBuf& sb)
 {
 	EntityPublisher epb;
-	bool exists_a_pub = EntityPub(ip, id_global, epb);
+	bool exists_a_pub = getEntityPub(ip, id_global, epb);
 	ASSERT(exists_a_pub);
 	if (!exists_a_pub)
 		return;
@@ -246,10 +245,10 @@ void CVrlinkDisDynamic::Send(IP ip, GlobalId id_global, const cvTObjStateBuf& sb
 
 bool CVrlinkDisDynamic::Receive(GlobalId id_global, const cvTObjStateBuf*& sb)
 {
-	std::map<GlobalId, EntityStub>::iterator it = m_reciversStub.find(id_global);
-	if (it != m_reciversStub.end())
+	std::map<GlobalId, EntityState>::iterator it = m_statesIn.find(id_global);
+	if (it != m_statesIn.end())
 	{
-		EntityStub esb = (*it).second;
+		EntityState esb = (*it).second;
 		if (esb.updated)
 			sb = esb.sb;
 		return esb.updated;
@@ -263,36 +262,47 @@ void CVrlinkDisDynamic::PreDynaCalc()
 {
 	//pre calc for sending
 	DtTime simTime = (DtTime)m_sysClk.GetTickCnt()/(DtTime)1000; //in seconds
-	for (std::map<IP, ProxyCnn>::iterator it = m_proxyCnns.begin()
-		; it != m_proxyCnns.end()
+	for (std::map<IP, CnnOut>::iterator it = m_cnnsOut.begin()
+		; it != m_cnnsOut.end()
 		; it ++)
 	{
-		std::pair<IP, ProxyCnn> p = *it;
+		std::pair<IP, CnnOut> p = *it;
 		DtExerciseConn* cnn = p.second.cnn;
 		cnn->clock()->setSimTime(simTime);
 		cnn->drainInput();
 	}
 	//pre calc for receiving
-	for (std::map<GlobalId, EntityStub>::iterator it = m_reciversStub.begin()
-		; it != m_reciversStub.end()
+	for (std::map<GlobalId, EntityState>::iterator it = m_statesIn.begin()
+		; it != m_statesIn.end()
 		; it ++)
 	{
-		EntityStub& p = (*it).second;
+		EntityState& p = (*it).second;
 		p.updated = false;
 	}
 
-	m_reciver->clock()->setSimTime(simTime);
-	m_reciver->drainInput();
-	DtReflectedEntity* e = m_receivedEntities->first();
+	m_cnnIn->clock()->setSimTime(simTime);
+	m_cnnIn->drainInput();
+	DtReflectedEntity* e = m_entitiesIn->first();
 	for(; e != NULL; e = e->next())
 	{
 		const DtObjectId& id = e->entityId();
 		GlobalId id_global = VrlinkId2GlobalId(id);
 		unsigned char* ip = (unsigned char*)&id_global.owner;
 		TRACE(TEXT("vrlink: received from [%d.%d.%d.%d]\n"), ip[0], ip[1], ip[2], ip[3]);
-		std::map<GlobalId, EntityStub>::iterator it = m_reciversStub.find(id_global);
-		if (m_reciversStub.end() == it) //rejects unrecognizable connections
-			continue;
+		std::map<GlobalId, EntityState>::iterator it = m_statesIn.find(id_global);
+		EntityState* esb = NULL;
+		if (m_statesIn.end() == it) //no state slot allocated in state buffer
+		{
+			EntityState& state = m_statesIn[id_global];
+			state.updated = false;
+			state.sb = new cvTObjStateBuf;
+			memset(state.sb, 0, sizeof(cvTObjStateBuf));
+			esb = &state;
+		}
+		else
+		{
+			esb = &(*it).second;
+		}
 
 		DtEntityStateRepository *esr = e->entityStateRep();
 		esr->setAlgorithm((DtDeadReckonTypes)s_disConf.drAlgor);
@@ -305,12 +315,10 @@ void CVrlinkDisDynamic::PreDynaCalc()
 		stateTran.loc = view.location();
 		stateTran.ori = view.orientation();
 
-
-		EntityStub& esb = (*it).second;
-		cvTObjStateBuf* sb = esb.sb;
+		cvTObjStateBuf* sb = esb->sb;
 		cvTObjState::ExternalDriverState* s = (cvTObjState::ExternalDriverState*)&sb->state;
 		Transform(stateTran, *s);
-		esb.updated = true;
+		esb->updated = true;
 	}
 
 }
@@ -318,12 +326,12 @@ void CVrlinkDisDynamic::PreDynaCalc()
 void CVrlinkDisDynamic::PostDynaCalc()
 {
 	//post calc for sending
-	for (std::map<IP, ProxyCnn>::iterator it = m_proxyCnns.begin()
-		; it != m_proxyCnns.end()
+	for (std::map<IP, CnnOut>::iterator it = m_cnnsOut.begin()
+		; it != m_cnnsOut.end()
 		; it ++)
 	{
-		std::pair<IP, ProxyCnn> p = *it;
-		for (std::map<TObjectPoolIdx, EntityProxy>::iterator it_pubs = p.second.pubs.begin()
+		std::pair<IP, CnnOut> p = *it;
+		for (std::map<TObjectPoolIdx, EntityPub>::iterator it_pubs = p.second.pubs.begin()
 			; it_pubs != p.second.pubs.end()
 			; it_pubs ++)
 		{

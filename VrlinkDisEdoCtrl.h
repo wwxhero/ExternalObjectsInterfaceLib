@@ -25,10 +25,12 @@ protected:
 							, const CVector3D& l)
 	{
 		//EDO controllor does not notify for creating an ado
+		ASSERT(0);
 	}
 	virtual void Notify_OnDelAdo(GlobalId id)
 	{
 		//EDO controller does not notify for deleting an ado
+		ASSERT(0);
 	}
 private:
 	static void OnRequest4CreateAdo( CCustomPdu* pdu, void* pThis );
