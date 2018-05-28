@@ -78,7 +78,8 @@ void CVrlinkDisDynamic::NetworkInitialize(const std::list<IP>& sendTo, const std
 	sInit.setDisVersionToSend(7);
 	sInit.setTimeStampType((DtTimeStampType)s_disConf.stmType);
 	char ipStrSelf[16] = {0};
-	sprintf(ipStrSelf, "%u.%u.%u.%u", self[0], self[1], self[2], self[3]); //fixme: this works only for little endian structure
+	unsigned char* seg = (unsigned char*) &self;
+	sprintf(ipStrSelf, "%u.%u.%u.%u", seg[0], seg[1], seg[2], seg[3]); //fixme: this works only for little endian structure
 	sInit.setDeviceAddress(ipStrSelf);
 	DtThresholder::setDfltTranslationThreshold(s_disConf.translationThreshold);
 	DtThresholder::setDfltRotationThreshold(s_disConf.rotationThreshold);

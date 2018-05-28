@@ -1,5 +1,6 @@
 #pragma once
 #include "vrlinkdisdynamic.h"
+#include "utility.h"
 class CVrlinkDisEdoCtrl :
 	public CVrlinkDisDynamic
 {
