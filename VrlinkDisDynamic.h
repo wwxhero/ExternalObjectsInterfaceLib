@@ -14,6 +14,7 @@
 ******************************************************************************/
 #pragma once
 #include <map>
+#include <set>
 #include "inetworkdynamic.h"
 #include "Clock.h"
 #include "CustomPdu.h"
@@ -136,6 +137,7 @@ protected:
 	static VrLinkConf s_disConf;
 	CClockStaticAln m_sysClk;
 	IP m_self;
+
 
 public:
 	const TERMINAL c_type;

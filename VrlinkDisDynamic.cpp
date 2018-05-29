@@ -116,6 +116,16 @@ void CVrlinkDisDynamic::NetworkInitialize(const std::list<IP>& sendTo, const std
 	CCustomPdu::StartListening<CPduExtObj, (DtPduKind)CCustomPdu::ExtObjState>(m_cnnIn, OnReceiveRawPdu, this);
 
 	m_self = self;
+	for (std::list<IP>::const_iterator itN = receiveFrom.begin()
+		; itN != receiveFrom.end()
+		; itN ++)
+	{
+		GlobalId id_neighbor = {*itN, 0}; //fixme: for a terminal is one of {ado ctrl}, it doesn't have a state slot for [0] object
+		EntityState& state = m_statesIn[id_neighbor];
+		state.updated = false;
+		state.sb = new cvTObjStateBuf;
+		memset(state.sb, 0, sizeof(cvTObjStateBuf));
+	}
 }
 
 void CVrlinkDisDynamic::NetworkUninitialize()
@@ -159,29 +169,24 @@ void CVrlinkDisDynamic::OnReceiveRawPdu( CCustomPdu* pdu, void* p)
 	const CPduExtObj::RawState& rs = pExtObj->GetState();
 	std::map<GlobalId, EntityState>::iterator it = pThis->m_statesIn.find(rs.id);
 	EntityState* esb = NULL;
-	if (pThis->m_statesIn.end() == it)
-	//no state slot allocated in statesIn buffer
-	//fixme: it should reject recognizable state
-	{
-		EntityState& state = pThis->m_statesIn[rs.id];
-		state.updated = false;
-		state.sb = new cvTObjStateBuf;
-		memset(state.sb, 0, sizeof(cvTObjStateBuf));
-		esb = &state;
-	}
-	else
+	if (pThis->m_statesIn.end() != it)
 		esb = &(*it).second;
-	cvTObjState::ExternalDriverState& s = esb->sb->state.externalDriverState;
-	s.visualState = rs.visualState;
-	s.audioState = rs.audioState;
-	s.suspStif = rs.suspStif;
-	s.suspDamp = rs.suspDamp;
-	s.tireStif = rs.tireStif;
-	s.tireDamp = rs.tireDamp;
-	s.velBrake = rs.velBrake;
-	memcpy(s.posHint, rs.posHint, sizeof(rs.posHint));
-	s.dynaFidelity = rs.dynaFidelity;
-	esb->updated = true;
+	if (NULL != esb)
+	{
+		cvTObjState::ExternalDriverState& s = esb->sb->state.externalDriverState;
+		s.visualState = rs.visualState;
+		s.audioState = rs.audioState;
+		s.suspStif = rs.suspStif;
+		s.suspDamp = rs.suspDamp;
+		s.tireStif = rs.tireStif;
+		s.tireDamp = rs.tireDamp;
+		s.velBrake = rs.velBrake;
+		memcpy(s.posHint, rs.posHint, sizeof(rs.posHint));
+		s.dynaFidelity = rs.dynaFidelity;
+		esb->updated = true;
+		unsigned char* seg = (unsigned char*)&rs.id.owner;
+		TRACE(TEXT("vrlink:raw pdu received from %d.%d.%d.%d:[%d]\n"), seg[0], seg[1], seg[2], seg[3], rs.id.objId);
+	}
 #ifdef _DEBUG
 	pExtObj->printData();
 #endif
@@ -280,22 +285,17 @@ void CVrlinkDisDynamic::PreDynaCalc()
 	{
 		const DtObjectId& id = e->entityId();
 		GlobalId id_global = VrlinkId2GlobalId(id);
-		unsigned char* ip = (unsigned char*)&id_global.owner;
-		TRACE(TEXT("vrlink: received from [%d.%d.%d.%d]\n"), ip[0], ip[1], ip[2], ip[3]);
 		std::map<GlobalId, EntityState>::iterator it = m_statesIn.find(id_global);
 		EntityState* esb = NULL;
-		if (m_statesIn.end() == it) //no state slot allocated in state buffer
-		{
-			EntityState& state = m_statesIn[id_global];
-			state.updated = false;
-			state.sb = new cvTObjStateBuf;
-			memset(state.sb, 0, sizeof(cvTObjStateBuf));
-			esb = &state;
-		}
-		else
+		if (m_statesIn.end() != it) //no state slot allocated in state buffer
 		{
 			esb = &(*it).second;
 		}
+		else
+			continue;
+
+		unsigned char* ip = (unsigned char*)&id_global.owner;
+		TRACE(TEXT("vrlink: received from [%d.%d.%d.%d]\n"), ip[0], ip[1], ip[2], ip[3]);
 
 		DtEntityStateRepository *esr = e->entityStateRep();
 		esr->setAlgorithm((DtDeadReckonTypes)s_disConf.drAlgor);

@@ -66,7 +66,7 @@ void CVrlinkDisEdoCtrl::NetworkInitialize(const std::list<IP>& sendTo, const std
 		; itOut ++)
 	{
 		ASSERT(m_cnnsOut.find(*itOut) != m_cnnsOut.end());
-		CnnOut out = m_cnnsOut[*itOut];
+		CnnOut& out = m_cnnsOut[*itOut];
 		DtEntityPublisher* pub = new DtEntityPublisher(f18Type, out.cnn
 			, (DtDeadReckonTypes)s_disConf.drAlgor, DtForceFriendly
 			, DtEntityPublisher::guiseSameAsType(), GlobalId2VrlinkId(id_global_self));

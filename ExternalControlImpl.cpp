@@ -49,7 +49,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdate(TObjectPoolIdx id_loc
 	int idx = recieved? 1: 0;
 	TRACE(TEXT("OnGetUpdate %s id:%d, \n\t position: [%E,%E,%E]")
 								TEXT("\n\t tangent: [%E,%E,%E]")
-								TEXT("\n\t lateral: [%E,%E,%E]")
+								TEXT("\n\t lateral: [%E,%E,%E]\n")
 									, recFlag[idx], id_local
 									, curState->anyState.position.x, curState->anyState.position.y, curState->anyState.position.z
 									, curState->anyState.tangent.i, curState->anyState.tangent.j, curState->anyState.tangent.k
