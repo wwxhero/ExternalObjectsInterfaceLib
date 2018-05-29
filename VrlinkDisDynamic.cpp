@@ -83,8 +83,6 @@ void CVrlinkDisDynamic::NetworkInitialize(const std::list<IP>& sendTo, const std
 	sInit.setDeviceAddress(ipStrSelf);
 	DtThresholder::setDfltTranslationThreshold(s_disConf.translationThreshold);
 	DtThresholder::setDfltRotationThreshold(s_disConf.rotationThreshold);
-	DtEntityType f18Type(s_disConf.kind, s_disConf.domain,
-		s_disConf.country, s_disConf.category, s_disConf.subCategory, s_disConf.specific, s_disConf.extra);
 	char ipStr[16] = {0};
 	for (std::list<IP>::const_iterator it = sendTo.begin()
 		; it != sendTo.end()
@@ -161,7 +159,9 @@ void CVrlinkDisDynamic::OnReceiveRawPdu( CCustomPdu* pdu, void* p)
 	const CPduExtObj::RawState& rs = pExtObj->GetState();
 	std::map<GlobalId, EntityState>::iterator it = pThis->m_statesIn.find(rs.id);
 	EntityState* esb = NULL;
-	if (pThis->m_statesIn.end() == it) //no state slot allocated in statesIn buffer
+	if (pThis->m_statesIn.end() == it)
+	//no state slot allocated in statesIn buffer
+	//fixme: it should reject recognizable state
 	{
 		EntityState& state = pThis->m_statesIn[rs.id];
 		state.updated = false;
@@ -198,12 +198,12 @@ void CVrlinkDisDynamic::Send(IP ip, GlobalId id_global, const cvTObjStateBuf& sb
 	ExternalDriverStateTran stateTran;
 	Transform(s->externalDriverState, stateTran);
 
-#ifdef _DEBUG
+#ifdef _VERIFY_TRANSFORM
 	const cvTObjState::ExternalDriverState& es = s->externalDriverState;
 	glm::vec3 angularVel(stateTran.rot.x(), stateTran.rot.y(), stateTran.rot.z());
 	float aL = rad2deg(glm::length(angularVel));
 	glm::vec3 aDir = glm::normalize(angularVel);
-	 cvTObjState::ExternalDriverState es_prime;
+	cvTObjState::ExternalDriverState es_prime;
 	Transform(stateTran, es_prime);
 	TRACE(TEXT("Send id:%d, \n\t position: [%E,%E,%E]->[%E,%E,%E]")
 							TEXT(", \n\t tangent: [%E,%E,%E]->[%E,%E,%E]")
