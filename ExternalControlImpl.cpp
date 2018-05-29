@@ -408,7 +408,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::InitIpclusters(const std::list<SE
 	{
 		std::pair<IP, Cluster> p = *it;
 		IP ip;
-		if (1) //p.second.mag > 1)
+		if (p.second.mag > 1)
 			ip = p.first;
 		else
 			ip = p.second.ip;
