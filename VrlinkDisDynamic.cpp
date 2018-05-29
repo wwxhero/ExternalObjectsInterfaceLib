@@ -231,6 +231,9 @@ void CVrlinkDisDynamic::Send(IP ip, GlobalId id_global, const cvTObjStateBuf& sb
 
 	CPduExtObj pduObj(id_global, sb.state.externalDriverState);
 	epb.cnn->sendStamped(pduObj);
+
+	unsigned char* seg = (unsigned char*)&ip;
+	TRACE(TEXT("vrlink: send to [%d.%d.%d.%d]\n"), seg[0], seg[1], seg[2], seg[3]);
 }
 
 bool CVrlinkDisDynamic::Receive(GlobalId id_global, const cvTObjStateBuf*& sb)
