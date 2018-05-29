@@ -1,8 +1,12 @@
 #include "StdAfx.h"
+#include <vl/exerciseConnDis.h>
+#include <vl/entityPublisherDIS.h>
+#include <vl/topoView.h>
 #include "VrlinkDisEdoCtrl.h"
 #include "PduCrtAdo.h"
 #include "PduDelAdo.h"
 #include "utility.h"
+
 
 
 void CVrlinkDisEdoCtrl::OnRequest4CreateAdo( CCustomPdu* pdu, void* p )
@@ -54,6 +58,25 @@ CVrlinkDisEdoCtrl::~CVrlinkDisEdoCtrl(void)
 void CVrlinkDisEdoCtrl::NetworkInitialize(const std::list<IP>& sendTo, const std::list<IP>& receiveFrom, int port, IP self)
 {
 	CVrlinkDisDynamic::NetworkInitialize(sendTo, receiveFrom, port, self);
+	GlobalId id_global_self = {self, 0};
+	DtEntityType f18Type(s_disConf.kind, s_disConf.domain,
+		s_disConf.country, s_disConf.category, s_disConf.subCategory, s_disConf.specific, s_disConf.extra);
+	for (std::list<IP>::const_iterator itOut = sendTo.begin()
+		; itOut != sendTo.end()
+		; itOut ++)
+	{
+		ASSERT(m_cnnsOut.find(*itOut) != m_cnnsOut.end());
+		CnnOut out = m_cnnsOut[*itOut];
+		DtEntityPublisher* pub = new DtEntityPublisher(f18Type, out.cnn
+			, (DtDeadReckonTypes)s_disConf.drAlgor, DtForceFriendly
+			, DtEntityPublisher::guiseSameAsType(), GlobalId2VrlinkId(id_global_self));
+		DtEntityStateRepository* esr = pub->entityStateRep();
+		DtTopoView* view = new DtTopoView(esr, s_disConf.latitude, s_disConf.longitude);
+		view->setOrientation(DtTaitBryan(s_disConf.viewOriPsi, s_disConf.viewOriTheta, s_disConf.viewOriPhi));
+		EntityPub epb = {pub, view};
+		out.pubs[0] = epb;
+	}
+
 	CCustomPdu::StartListening<CPduCrtAdo, (DtPduKind)CCustomPdu::OnCrtAdo>(m_cnnIn, OnRequest4CreateAdo, this);
 	CCustomPdu::StartListening<CPduDelAdo, (DtPduKind)CCustomPdu::OnDelAdo>(m_cnnIn, OnRequest4DeleteAdo, this);
 }

@@ -85,7 +85,6 @@ void CVrlinkDisDynamic::NetworkInitialize(const std::list<IP>& sendTo, const std
 	DtThresholder::setDfltRotationThreshold(s_disConf.rotationThreshold);
 	DtEntityType f18Type(s_disConf.kind, s_disConf.domain,
 		s_disConf.country, s_disConf.category, s_disConf.subCategory, s_disConf.specific, s_disConf.extra);
-	GlobalId id_global_self = {self, 0};
 	char ipStr[16] = {0};
 	for (std::list<IP>::const_iterator it = sendTo.begin()
 		; it != sendTo.end()
@@ -97,21 +96,11 @@ void CVrlinkDisDynamic::NetworkInitialize(const std::list<IP>& sendTo, const std
 		sInit.setDestinationAddress(ipStr);
 		DtExerciseConn* cnn = new DtExerciseConn(sInit, &status);
 		ASSERT(DtExerciseConn::DtINIT_SUCCESS == status);
-		DtEntityPublisher* pub = new DtEntityPublisher(f18Type, cnn
-			, (DtDeadReckonTypes)s_disConf.drAlgor, DtForceFriendly
-			, DtEntityPublisher::guiseSameAsType(), GlobalId2VrlinkId(id_global_self));
-		DtEntityStateRepository* esr = pub->entityStateRep();
-		DtTopoView* view = new DtTopoView(esr, s_disConf.latitude, s_disConf.longitude);
-		view->setOrientation(DtTaitBryan(s_disConf.viewOriPsi, s_disConf.viewOriTheta, s_disConf.viewOriPhi));
-
-		DtClock* clk = cnn->clock();
-		clk->init();
-
 		CnnOut& out = m_cnnsOut[ip];
 		out.cnn = cnn;
 
-		EntityPub epb = {pub, view};
-		out.pubs[0] = epb;
+		DtClock* clk = cnn->clock();
+		clk->init();
 	}
 
 	//initialize for receiver
