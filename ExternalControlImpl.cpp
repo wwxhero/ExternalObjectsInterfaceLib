@@ -367,17 +367,20 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 			hBlk.TagLocalhost();
 			numSelf ++;
 
-			CVED::CDynObj* psudoOwn = CreatePeerDriver(hBlk, pCved, eCV_VEHICLE);
-			CPoint3D pos = psudoOwn->GetPos();
-			CVector3D tan = psudoOwn->GetTan();
-			CVector3D lat = psudoOwn->GetLat();
-			TPoint3D p = {pos.m_x, pos.m_y, pos.m_z};
-			TVector3D t = {tan.m_i, tan.m_j, tan.m_k};
-			TVector3D l = {lat.m_i, lat.m_j, lat.m_k};
-			state0.externalDriverState.position = p;
-			state0.externalDriverState.tangent = t;
-			state0.externalDriverState.lateral = l;
-			pCved->DeleteDynObj(psudoOwn);
+			if (edo_controller == c_type)
+			{
+				CVED::CDynObj* psudoOwn = CreatePeerDriver(hBlk, pCved, eCV_VEHICLE);
+				CPoint3D pos = psudoOwn->GetPos();
+				CVector3D tan = psudoOwn->GetTan();
+				CVector3D lat = psudoOwn->GetLat();
+				TPoint3D p = {pos.m_x, pos.m_y, pos.m_z};
+				TVector3D t = {tan.m_i, tan.m_j, tan.m_k};
+				TVector3D l = {lat.m_i, lat.m_j, lat.m_k};
+				state0.externalDriverState.position = p;
+				state0.externalDriverState.tangent = t;
+				state0.externalDriverState.lateral = l;
+				pCved->DeleteDynObj(psudoOwn);
+			}
 		}
 	} while (hBlk.NextExternalBlk());
 
@@ -388,7 +391,8 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 		NetworkInitialize(m_ipClusters, neighborsFrom, hBlk.GetPort(), m_selfIp);
 		m_pCved = pCved;
 
-		OnPushUpdate(0, &inp0, &state0);
+		if (edo_controller == c_type)
+			OnPushUpdate(0, &inp0, &state0);
 	}
 	return ok;
 }
