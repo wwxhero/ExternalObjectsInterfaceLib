@@ -6,7 +6,7 @@
  *
  * Version: 1.0
  *
- * Author: Mathew Wang
+ * Author: Matthew Wang
  *
  * Date: Feb, 6, 2018
  *
