@@ -46,11 +46,13 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdate(TObjectPoolIdx id_loc
 		TEXT("NReceived")
 		, TEXT("Received")
 	};
+	const unsigned char* seg = (const unsigned char*)&id_global.owner;
 	int idx = recieved? 1: 0;
-	TRACE(TEXT("OnGetUpdate %s id:%d, \n\t position: [%E,%E,%E]")
+	TRACE(TEXT("OnGetUpdate %s id:%d from ip:[%d.%d.%d.%d]")
+								TEXT("\n\t position: [%E,%E,%E]")
 								TEXT("\n\t tangent: [%E,%E,%E]")
 								TEXT("\n\t lateral: [%E,%E,%E]\n")
-									, recFlag[idx], id_local
+									, recFlag[idx], id_local, seg[0], seg[1], seg[2], seg[3]
 									, curState->anyState.position.x, curState->anyState.position.y, curState->anyState.position.z
 									, curState->anyState.tangent.i, curState->anyState.tangent.j, curState->anyState.tangent.k
 									, curState->anyState.lateral.i, curState->anyState.lateral.j, curState->anyState.lateral.k );
