@@ -277,7 +277,7 @@ void Transform(const ExternalDriverStateTran& src, cvTObjState::VehicleState& a_
 
 	TVector3D angularVel;
 	AVVrlink2SimRad(src.rot, angularVel, dst.tangent, dst.lateral);
-	dst.steeringWheelAngle = angularVel.k;
+	dst.steeringWheelAngle = 0; //angularVel.k;
 	dst.rollRate = rad2deg(angularVel.i);
 	dst.pitchRate = rad2deg(angularVel.j);
 	dst.yawRate = rad2deg(angularVel.k);
