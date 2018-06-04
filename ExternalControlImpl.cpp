@@ -495,13 +495,16 @@ template<class TNetworkImpl>
 void CExternalObjectControlImpl<TNetworkImpl>::DeleteAdoStub(GlobalId id_global)
 {
 	std::map<GlobalId, CDynObj*>::iterator it = m_mapGid2Ado.find(id_global);
-	ASSERT(it != m_mapGid2Ado.end());
-	CDynObj* obj = (*it).second;
-	TObjectPoolIdx id_local = obj->GetId();
-	m_pCved->DeleteDynObj(obj);
-	m_mapGid2Ado.erase(it);
-	m_mapLid2Gid.erase(id_local);
-	TRACE(TEXT("EDO Ctrl: Delete ADO %d\n"), id_local);
+	//ASSERT(it != m_mapGid2Ado.end());
+	if (it != m_mapGid2Ado.end())
+	{
+		CDynObj* obj = (*it).second;
+		TObjectPoolIdx id_local = obj->GetId();
+		m_pCved->DeleteDynObj(obj);
+		m_mapGid2Ado.erase(it);
+		m_mapLid2Gid.erase(id_local);
+		TRACE(TEXT("EDO Ctrl: Delete ADO %d\n"), id_local);
+	}
 }
 
 template<class TNetworkImpl>

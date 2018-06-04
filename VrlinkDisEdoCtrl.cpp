@@ -36,7 +36,7 @@ void CVrlinkDisEdoCtrl::OnRequest4DeleteAdo( CCustomPdu* pdu, void* p )
 	pThis->DeleteAdoStub(id_global);
 
 	std::map<GlobalId, EntityState>::iterator it = pThis->m_statesIn.find(id_global);
-	ASSERT(it != pThis->m_statesIn.end());
+	//ASSERT(it != pThis->m_statesIn.end());
 	if (it != pThis->m_statesIn.end())
 	{
 		EntityState& buf = it->second;
