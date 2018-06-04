@@ -204,7 +204,6 @@ void Transform(const cvTObjState::ExternalDriverState& src, ExternalDriverStateT
 	dst.loc.setY(src.position.y);
 	dst.loc.setZ(src.position.z);
 
-	ASSERT(src.vel >= 0); //fixme: vehicle can't move backward
 	double v = src.vel;
 	dst.vel.setX(v * src.tangent.i);
 	dst.vel.setY(v * src.tangent.j);
