@@ -98,9 +98,9 @@ inline void TaitBryan2Frame(const DtTaitBryan& ori, const TVector3D& tangent, co
 
 inline void AVSim2Vrlink(const TVector3D& src, DtVector32& dst, const TVector3D& tangent, const TVector3D& lateral)
 {
-	//src.k stands for yaw velocity in degree
-	//src.j stands for pitch velocity
-	//src.i stands for roll velocity
+	//src.k stands for yaw velocity in degree:	d(yaw)/d(t)
+	//src.j stands for pitch velocity:			d(pitch)/d(t)
+	//src.i stands for roll velocity:			d(roll)/d(t)
 	DtTaitBryan aTB(deg2rad(src.k), deg2rad(src.j), deg2rad(src.i));
 	DtQuaternion aQ(aTB);
 	glm::vec3 sin_half_time_axis(aQ.x(), aQ.y(), aQ.z());
@@ -162,6 +162,39 @@ inline void AVVrlink2Sim(const DtVector32& src, TVector3D& dst, const TVector3D&
 	}
 }
 
+inline void AVVrlink2SimRad(const DtVector32& src, TVector3D& dst, const TVector3D& tangent, const TVector3D& lateral)
+{
+	//dst.k stands for yaw velocity in degree
+	//dst.j stands for pitch velocity
+	//dst.i stands for roll velocity
+	float a = sqrt(src.magnitudeSquared());
+	if (Approach(a, 0)) //no rotation happens
+	{
+		dst.i = 0;
+		dst.j = 0;
+		dst.k = 0;
+	}
+	else
+	{
+		float inv_a = 1/a;
+		glm::vec3 u_e(src.x()*inv_a, src.y()*inv_a, src.z()*inv_a);
+		glm::vec3 x_w(tangent.i, tangent.j, tangent.k);
+		glm::vec3 y_w(lateral.i, lateral.j, lateral.k);
+		glm::vec3 z_w = cross(x_w, y_w);
+		glm::mat3 entity2world(x_w, y_w, z_w);
+		glm::vec3 u_w = entity2world * u_e;
+		float half_a = a * 0.5f;
+		float sin_half = sin(half_a);
+		float cos_half = cos(half_a);
+		glm::quat q(cos_half, sin_half * u_w);
+		DtQuaternion q_vrlink(q.w, q.x, q.y, q.z);
+		DtTaitBryan ori = q_vrlink; //this call might have performance overhead
+		dst.k = ori.psi();
+		dst.j = ori.theta();
+		dst.i = ori.phi();
+	}
+}
+
 inline bool Lateral(const TVector3D& up0, const TVector3D& tangentn, const DtVector32& acc, TVector3D& lateral)
 {
 	glm::dvec3 t(tangentn.i, tangentn.j, tangentn.k);
@@ -220,8 +253,10 @@ void Transform(const cvTObjState::ExternalDriverState& src, ExternalDriverStateT
 	Frame2TaitBryan(c_t0, c_l0, src.tangent, src.lateral, dst.ori);
 }
 
-void Transform(const ExternalDriverStateTran& src, cvTObjState::ExternalDriverState& dst)
+void Transform(const ExternalDriverStateTran& src, cvTObjState::VehicleState& a_dst)
 {
+	memset(&a_dst, 0, sizeof(cvTObjState::VehicleState)); //fixme: a set of vehicle attributes are ignored and being set 0
+	TVehicleState& dst = a_dst.vehState;
 	dst.position.x = src.loc.x();
 	dst.position.y = src.loc.y();
 	dst.position.z = src.loc.z();
@@ -239,7 +274,13 @@ void Transform(const ExternalDriverStateTran& src, cvTObjState::ExternalDriverSt
 	double al = a.dotProduct(l);
 	dst.latAccel = al;
 
-	AVVrlink2Sim(src.rot, dst.angularVel, dst.tangent, dst.lateral);
+
+	TVector3D angularVel;
+	AVVrlink2SimRad(src.rot, angularVel, dst.tangent, dst.lateral);
+	dst.steeringWheelAngle = angularVel.k;
+	dst.rollRate = rad2deg(angularVel.i);
+	dst.pitchRate = rad2deg(angularVel.j);
+	dst.yawRate = rad2deg(angularVel.k);
 }
 
 #endif

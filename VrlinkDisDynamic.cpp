@@ -309,7 +309,7 @@ void CVrlinkDisDynamic::PreDynaCalc()
 		stateTran.ori = view.orientation();
 
 		cvTObjStateBuf* sb = esb->sb;
-		cvTObjState::ExternalDriverState* s = (cvTObjState::ExternalDriverState*)&sb->state;
+		cvTObjState::VehicleState* s = (cvTObjState::VehicleState*)&sb->state;
 		Transform(stateTran, *s);
 		esb->updated = true;
 	}
