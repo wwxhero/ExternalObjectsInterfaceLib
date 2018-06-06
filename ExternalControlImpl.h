@@ -57,6 +57,8 @@ private:
 	std::list<CVED::CDynObj*> m_lstPeers;
 	IP m_selfIp;
 	CVED::CCvedDistri* m_pCved;
+
+	std::set<GlobalId> m_setAdos;
 };
 
 #include "ExternalControlImpl.cpp"

@@ -441,6 +441,14 @@ void CExternalObjectControlImpl<TNetworkImpl>::InitIpclusters(const std::list<SE
 template<class TNetworkImpl>
 void CExternalObjectControlImpl<TNetworkImpl>::UnInitialize()
 {
+	for (std::set<GlobalId>::iterator it = m_setAdos.begin()
+		; it != m_setAdos.end()
+		; ++ it)
+	{
+		GlobalId id = *it;
+		TNetworkImpl::Notify_OnDelAdo(id);
+	}
+	m_setAdos.clear();
 	NetworkUninitialize();
 	m_ipClusters.clear();
 	m_mapLid2Gid.clear();
@@ -518,6 +526,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnCreateADO(TObjectPoolIdx id_loc
 	GlobalId id = {m_selfIp, id_local};
 	TNetworkImpl::Notify_OnNewAdo(id, szName, cAttr, pos, t, l);
 	TRACE(TEXT("ADO Ctrl: Create ADO %d\n"), id_local);
+	m_setAdos.insert(id);
 }
 
 template<class TNetworkImpl>
@@ -526,4 +535,5 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnDeleteADO(TObjectPoolIdx id_loc
 	GlobalId id = {m_selfIp, id_local};
 	TNetworkImpl::Notify_OnDelAdo(id);
 	TRACE(TEXT("ADO Ctrl: Delete ADO %d\n"), id_local);
+	m_setAdos.erase(id);
 }
