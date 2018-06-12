@@ -40,7 +40,6 @@ private:
 	} SEG;
 	void InitIpclusters(const std::list<SEG>& ips, std::list<IP>& clusters);
 	void BroadCastObj(TObjectPoolIdx id_local, const cvTObjStateBuf* sb);
-	static CVED::CDynObj* CreatePeerDriver(CHeaderDistriParseBlock& blk, CVED::CCved* cved, cvEObjType runAs);
 
 	virtual void CreateAdoStub(GlobalId id_global
 							, const std::string& name
