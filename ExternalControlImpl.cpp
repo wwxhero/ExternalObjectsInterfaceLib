@@ -96,7 +96,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdate(TObjectPoolIdx id_lo
 }
 
 template<class TNetworkImpl>
-bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBlock& hBlk, CVED::CCvedDistri* pCved)
+bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBlock& hBlk, CVED::ICvedDistri* pCvedDistri)
 {
 	std::set<IP> localhostIps;
 	GetLocalhostIps(localhostIps);
@@ -130,7 +130,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 
 		if (peerEdoBlk)
 		{
-			CVED::CDynObj* peerObj = pCved->CreatePeerDriver(hBlk);
+			CVED::CDynObj* peerObj = pCvedDistri->LocalCreatePeerDriver(hBlk);
 			id_local = peerObj->GetId();
 			m_lstPeers.push_back(peerObj);
 			GlobalId id_global = {simIP, 0};
@@ -145,7 +145,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 
 			if (edo_controller == c_type)
 			{
-				CVED::CDynObj* psudoOwn = pCved->CreatePeerDriver(hBlk);
+				CVED::CDynObj* psudoOwn = pCvedDistri->LocalCreatePeerDriver(hBlk);
 				CPoint3D pos = psudoOwn->GetPos();
 				CVector3D tan = psudoOwn->GetTan();
 				CVector3D lat = psudoOwn->GetLat();
@@ -155,7 +155,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 				state0.externalDriverState.position = p;
 				state0.externalDriverState.tangent = t;
 				state0.externalDriverState.lateral = l;
-				pCved->DeleteDynObj(psudoOwn);
+				pCvedDistri->LocalDeleteDynObj(psudoOwn);
 			}
 		}
 	} while (hBlk.NextExternalBlk());
@@ -165,7 +165,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 	{
 		InitIpclusters(neighborsTo, m_ipClusters);
 		NetworkInitialize(m_ipClusters, neighborsFrom, hBlk.GetPort(), m_selfIp);
-		m_pCved = pCved;
+		m_pCved = pCvedDistri;
 
 		if (edo_controller == c_type)
 			OnPushUpdate(0, &inp0, &state0);
@@ -227,7 +227,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::UnInitialize()
 	m_ipClusters.clear();
 	m_mapLid2Gid.clear();
 	for (std::list<CVED::CDynObj*>::iterator it = m_lstPeers.begin(); it != m_lstPeers.end(); it ++)
-		m_pCved->DeleteDynObj(*it);
+		m_pCved->LocalDeleteDynObj(*it);
 	m_lstPeers.clear();
 
 }
@@ -266,7 +266,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::CreateAdoStub(GlobalId id_global
 													, const CVector3D* cpInitTran
 													, const CVector3D* cpInitLat)
 {
-	CDynObj* obj = m_pCved->CreateDynObj(name, eCV_VEHICLE, cAttr, cpInitPos, cpInitTran, cpInitLat);
+	CDynObj* obj = m_pCved->LocalCreateDynObj(name, eCV_VEHICLE, cAttr, cpInitPos, cpInitTran, cpInitLat);
 	TObjectPoolIdx id_local = obj->GetId();
 	m_mapLid2Gid[id_local] = id_global;
 	m_mapGid2Ado[id_global] = obj;
@@ -282,7 +282,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::DeleteAdoStub(GlobalId id_global)
 	{
 		CDynObj* obj = (*it).second;
 		TObjectPoolIdx id_local = obj->GetId();
-		m_pCved->DeleteDynObj(obj);
+		m_pCved->LocalDeleteDynObj(obj);
 		m_mapGid2Ado.erase(it);
 		m_mapLid2Gid.erase(id_local);
 		TRACE(TEXT("EDO Ctrl: Delete ADO %d\n"), id_local);

@@ -24,7 +24,7 @@ public:
 							, const CVector3D& t
 							, const CVector3D& l);
 	virtual void OnDeleteADO(TObjectPoolIdx id_local);
-	virtual bool Initialize(CHeaderDistriParseBlock& blk, CVED::CCvedDistri* pCved);
+	virtual bool Initialize(CHeaderDistriParseBlock& blk, CVED::ICvedDistri* pCvedDistri);
 	virtual void UnInitialize();
 private:
 	typedef struct _SEG
@@ -55,7 +55,7 @@ private:
 	std::list<IP> m_ipClusters;
 	std::list<CVED::CDynObj*> m_lstPeers;
 	IP m_selfIp;
-	CVED::CCvedDistri* m_pCved;
+	CVED::ICvedDistri* m_pCved;
 
 	std::set<GlobalId> m_setAdos;
 };
