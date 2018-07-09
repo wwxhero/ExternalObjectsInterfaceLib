@@ -2,6 +2,7 @@
 #include "LibExternalObjectIfNetwork.h"
 #include "VrlinkDisAdoCtrl.h"
 #include "VrlinkDisEdoCtrl.h"
+#include "VrlinkDisPedCtrl.h"
 #include "ExternalControlImpl.h"
 CVED::IExternalObjectControl* CreateNetworkExternalObjectControl(IMPLE imple, TERMINAL t)
 {
@@ -10,6 +11,8 @@ CVED::IExternalObjectControl* CreateNetworkExternalObjectControl(IMPLE imple, TE
 		p = new CExternalObjectControlImpl<CVrlinkDisEdoCtrl>();
 	else if (imple == DISVRLINK && t == ado_controller)
 		p = new CExternalObjectControlImpl<CVrlinkDisAdoCtrl>();
+	else if (imple == DISVRLINK && t == ped_controller)
+		p = new CExternalObjectControlImpl<CVrlinkDisPedCtrl>();
 	else
 		ASSERT(0); //out of support
 	return p;

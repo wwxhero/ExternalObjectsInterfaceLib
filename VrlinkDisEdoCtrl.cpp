@@ -49,6 +49,9 @@ CVrlinkDisEdoCtrl::CVrlinkDisEdoCtrl(void) : CVrlinkDisDynamic(edo_controller)
 {
 }
 
+CVrlinkDisEdoCtrl::CVrlinkDisEdoCtrl(TERMINAL t) : CVrlinkDisDynamic(t)
+{
+}
 
 CVrlinkDisEdoCtrl::~CVrlinkDisEdoCtrl(void)
 {

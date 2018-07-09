@@ -6,6 +6,7 @@ class CVrlinkDisEdoCtrl :
 {
 protected:
 	CVrlinkDisEdoCtrl(void);
+	CVrlinkDisEdoCtrl(TERMINAL t);
 	virtual ~CVrlinkDisEdoCtrl(void);
 	virtual void NetworkInitialize(const std::list<IP>& sendTo, const std::list<IP>& receiveFrom, int port, IP self);
 	virtual void NetworkUninitialize();
