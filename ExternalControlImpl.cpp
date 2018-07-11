@@ -106,7 +106,6 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 	int id_local = 0; //cved object id
 	int numSelf = 0;
 	//edo_controller, ado_controller
-	cvEObjType objTypes[] = {eCV_VEHICLE, eCV_EXTERNAL_DRIVER};
 	cvTObjState state0 = {0};
 	cvTObjContInp inp0 = {0};
 	do
@@ -130,7 +129,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 
 		if (peerEdoBlk)
 		{
-			CVED::CDynObj* peerObj = pCvedDistri->LocalCreatePeerDriver(hBlk);
+			CVED::CDynObj* peerObj = pCvedDistri->LocalCreateDynObj(hBlk);
 			id_local = peerObj->GetId();
 			m_lstPeers.push_back(peerObj);
 			GlobalId id_global = {simIP, 0};
@@ -145,7 +144,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 
 			if (edo_controller == c_type)
 			{
-				CVED::CDynObj* psudoOwn = pCvedDistri->LocalCreatePeerDriver(hBlk);
+				CVED::CDynObj* psudoOwn = pCvedDistri->LocalCreateDynObj(hBlk);
 				CPoint3D pos = psudoOwn->GetPos();
 				CVector3D tan = psudoOwn->GetTan();
 				CVector3D lat = psudoOwn->GetLat();
