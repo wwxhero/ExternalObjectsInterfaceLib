@@ -9,6 +9,7 @@ template<class TNetworkImpl>
 CExternalObjectControlImpl<TNetworkImpl>::CExternalObjectControlImpl()
 	: m_pCved(NULL)
 	, m_selfIp(0)
+	, m_pedestrian(NULL)
 {
 }
 
@@ -20,8 +21,8 @@ CExternalObjectControlImpl<TNetworkImpl>::~CExternalObjectControlImpl()
 template<class TNetworkImpl>
 bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdate(TObjectPoolIdx id_local, cvTObjContInp* curInput, cvTObjState* curState)
 {
-	std::map<TObjectPoolIdx, GlobalId>::iterator it = m_mapLid2Gid.find(id_local);
-	if (it == m_mapLid2Gid.end())
+	std::map<TObjectPoolIdx, GlobalId>::iterator it = m_mapLid2GidR.find(id_local);
+	if (it == m_mapLid2GidR.end())
 	{
 		//assert(0);
 		return false;
@@ -108,6 +109,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 	//edo_controller, ado_controller
 	cvTObjState state0 = {0};
 	cvTObjContInp inp0 = {0};
+
 	do
 	{
 		std::string ipStr = hBlk.GetIPV4();
@@ -119,6 +121,12 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 		bool neighborBlk = !selfBlk;
 		bool peerEdoBlk = (edo_controller == hBlk.GetType()
 						&& (edo_controller != c_type || !selfBlk));
+		bool ownEdoBlk = (edo_controller == hBlk.GetType() && selfBlk);
+		bool peerAdoBlk = false; //due to current design, peer ado will constantly be false
+		bool ownAdoBlk = (ado_controller == hBlk.GetType() && selfBlk);
+		bool peerPedBlk = (ped_controller == hBlk.GetType()
+						&& (ped_controller != c_type || !selfBlk));
+		bool ownPedBlk = (ped_controller == hBlk.GetType() && selfBlk);
 
 		if (neighborBlk)
 		{
@@ -126,47 +134,70 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 			neighborsTo.push_back(seg);
 			neighborsFrom.push_back(simIP);
 		}
-
-		if (peerEdoBlk)
-		{
-			CVED::CDynObj* peerObj = pCvedDistri->LocalCreateDynObj(hBlk);
-			id_local = peerObj->GetId();
-			m_lstPeers.push_back(peerObj);
-			GlobalId id_global = {simIP, 0};
-			m_mapLid2Gid.insert(std::pair<TObjectPoolIdx, GlobalId>(id_local, id_global));
-		}
-
-		if (selfBlk)
+		else //selfBlk
 		{
 			m_selfIp = simIP;
 			hBlk.TagLocalhost();
 			numSelf ++;
-
-			if (edo_controller == c_type)
-			{
-				CVED::CDynObj* psudoOwn = pCvedDistri->LocalCreateDynObj(hBlk);
-				CPoint3D pos = psudoOwn->GetPos();
-				CVector3D tan = psudoOwn->GetTan();
-				CVector3D lat = psudoOwn->GetLat();
-				TPoint3D p = {pos.m_x, pos.m_y, pos.m_z};
-				TVector3D t = {tan.m_i, tan.m_j, tan.m_k};
-				TVector3D l = {lat.m_i, lat.m_j, lat.m_k};
-				state0.externalDriverState.position = p;
-				state0.externalDriverState.tangent = t;
-				state0.externalDriverState.lateral = l;
-				pCvedDistri->LocalDeleteDynObj(psudoOwn);
-			}
 		}
+
+		if (peerEdoBlk)
+		{
+			CVED::CDynObj* peerObj = pCvedDistri->LocalCreateExtObj(hBlk);
+			id_local = peerObj->GetId();
+			GlobalId id_global = {simIP, 0};
+			m_mapGid2ObjR[id_global] = peerObj;
+			m_mapLid2GidR.insert(std::pair<TObjectPoolIdx, GlobalId>(id_local, id_global));
+		}
+		else if (ownEdoBlk)
+		{
+			CVED::CDynObj* psudoOwn = pCvedDistri->LocalCreateExtObj(hBlk);
+			CPoint3D pos = psudoOwn->GetPos();
+			CVector3D tan = psudoOwn->GetTan();
+			CVector3D lat = psudoOwn->GetLat();
+			TPoint3D p = {pos.m_x, pos.m_y, pos.m_z};
+			TVector3D t = {tan.m_i, tan.m_j, tan.m_k};
+			TVector3D l = {lat.m_i, lat.m_j, lat.m_k};
+			state0.externalDriverState.position = p;
+			state0.externalDriverState.tangent = t;
+			state0.externalDriverState.lateral = l;
+			pCvedDistri->LocalDeleteDynObj(psudoOwn);
+		}
+		else if (ownPedBlk) //runs for hank simulator
+		{
+			//fixme: pedestrain object is considered as a vehicle
+			m_pedestrian = pCvedDistri->LocalCreatePedObj(hBlk);
+			CPoint3D pos = m_pedestrian->GetPos();
+			CVector3D tan = m_pedestrian->GetTan();
+			CVector3D lat = m_pedestrian->GetLat();
+			TPoint3D p = {pos.m_x, pos.m_y, pos.m_z};
+			TVector3D t = {tan.m_i, tan.m_j, tan.m_k};
+			TVector3D l = {lat.m_i, lat.m_j, lat.m_k};
+			state0.externalDriverState.position = p;
+			state0.externalDriverState.tangent = t;
+			state0.externalDriverState.lateral = l;
+		}
+		else if (peerPedBlk) //runs for nads simulator
+		{
+			//fixme: a terminal computer can only have 1 avatar
+			CVED::CDynObj* avatar = pCvedDistri->LocalCreatePedObj(hBlk);
+			GlobalId id_global = {simIP, 0};
+			m_mapGid2ObjR[id_global] = avatar;
+			int id_local = avatar->GetId();
+			m_mapLid2GidR.insert(std::pair<TObjectPoolIdx, GlobalId>(id_local, id_global));
+		}
+
 	} while (hBlk.NextExternalBlk());
 
-	bool ok = (numSelf == 1);
+	bool ok = (numSelf > 0); //scene includes this computer as a terminal
 	if (ok)
 	{
 		InitIpclusters(neighborsTo, m_ipClusters);
 		NetworkInitialize(m_ipClusters, neighborsFrom, hBlk.GetPort(), m_selfIp);
 		m_pCved = pCvedDistri;
 
-		if (edo_controller == c_type)
+		if (edo_controller == c_type
+			|| ped_controller == c_type)
 			OnPushUpdate(0, &inp0, &state0);
 	}
 	return ok;
@@ -203,7 +234,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::InitIpclusters(const std::list<SE
 	{
 		std::pair<IP, Cluster> p = *it;
 		IP ip;
-		if (1) //p.second.mag > 1)
+		if (1) //p.second.mag > 1) vrlink support for unicast is buggy, thus we just use broad cast
 			ip = p.first;
 		else
 			ip = p.second.ip;
@@ -214,21 +245,32 @@ void CExternalObjectControlImpl<TNetworkImpl>::InitIpclusters(const std::list<SE
 template<class TNetworkImpl>
 void CExternalObjectControlImpl<TNetworkImpl>::UnInitialize()
 {
-	for (std::set<GlobalId>::iterator it = m_setAdos.begin()
-		; it != m_setAdos.end()
+	for (std::set<GlobalId>::iterator it = m_setAdosL.begin()
+		; it != m_setAdosL.end()
 		; ++ it)
 	{
 		GlobalId id = *it;
 		TNetworkImpl::Notify_OnDelAdo(id);
 	}
-	m_setAdos.clear();
+	m_setAdosL.clear();
 	NetworkUninitialize();
 	m_ipClusters.clear();
-	m_mapLid2Gid.clear();
-	for (std::list<CVED::CDynObj*>::iterator it = m_lstPeers.begin(); it != m_lstPeers.end(); it ++)
-		m_pCved->LocalDeleteDynObj(*it);
-	m_lstPeers.clear();
+	m_mapLid2GidR.clear();
 
+	for (std::map<GlobalId, CDynObj*>::iterator it = m_mapGid2ObjR.begin()
+		; it != m_mapGid2ObjR.end()
+		; it ++)
+	{
+		std::pair<GlobalId, CDynObj*> p = *it;
+		m_pCved->LocalDeleteDynObj(p.second);
+	}
+	m_mapGid2ObjR.clear();
+
+	if (NULL != m_pedestrian)
+	{
+		m_pCved->LocalDeleteDynObj(m_pedestrian);
+		m_pedestrian = NULL;
+	}
 }
 
 template<class TNetworkImpl>
@@ -267,23 +309,22 @@ void CExternalObjectControlImpl<TNetworkImpl>::CreateAdoStub(GlobalId id_global
 {
 	CDynObj* obj = m_pCved->LocalCreateDynObj(name, eCV_VEHICLE, cAttr, cpInitPos, cpInitTran, cpInitLat);
 	TObjectPoolIdx id_local = obj->GetId();
-	m_mapLid2Gid[id_local] = id_global;
-	m_mapGid2Ado[id_global] = obj;
+	m_mapLid2GidR[id_local] = id_global;
+	m_mapGid2ObjR[id_global] = obj;
 	TRACE(TEXT("EDO Ctrl: Create ADO %d\n"), id_local);
 }
 
 template<class TNetworkImpl>
 void CExternalObjectControlImpl<TNetworkImpl>::DeleteAdoStub(GlobalId id_global)
 {
-	std::map<GlobalId, CDynObj*>::iterator it = m_mapGid2Ado.find(id_global);
-	//ASSERT(it != m_mapGid2Ado.end());
-	if (it != m_mapGid2Ado.end())
+	std::map<GlobalId, CDynObj*>::iterator it = m_mapGid2ObjR.find(id_global);
+	if (it != m_mapGid2ObjR.end())
 	{
 		CDynObj* obj = (*it).second;
 		TObjectPoolIdx id_local = obj->GetId();
 		m_pCved->LocalDeleteDynObj(obj);
-		m_mapGid2Ado.erase(it);
-		m_mapLid2Gid.erase(id_local);
+		m_mapGid2ObjR.erase(it);
+		m_mapLid2GidR.erase(id_local);
 		TRACE(TEXT("EDO Ctrl: Delete ADO %d\n"), id_local);
 	}
 }
@@ -299,7 +340,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnCreateADO(TObjectPoolIdx id_loc
 	GlobalId id = {m_selfIp, id_local};
 	TNetworkImpl::Notify_OnNewAdo(id, szName, cAttr, pos, t, l);
 	TRACE(TEXT("ADO Ctrl: Create ADO %d\n"), id_local);
-	m_setAdos.insert(id);
+	m_setAdosL.insert(id);
 }
 
 template<class TNetworkImpl>
@@ -308,5 +349,5 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnDeleteADO(TObjectPoolIdx id_loc
 	GlobalId id = {m_selfIp, id_local};
 	TNetworkImpl::Notify_OnDelAdo(id);
 	TRACE(TEXT("ADO Ctrl: Delete ADO %d\n"), id_local);
-	m_setAdos.erase(id);
+	m_setAdosL.erase(id);
 }

@@ -49,15 +49,15 @@ private:
 							, const CVector3D* cpInitLat);
 	virtual void DeleteAdoStub(GlobalId id_global);
 private:
-	std::map<TObjectPoolIdx, GlobalId> m_mapLid2Gid;
-	std::map<GlobalId, CDynObj*> m_mapGid2Ado;
+	std::map<TObjectPoolIdx, GlobalId> m_mapLid2GidR;	//stores all the IDs of remote dynamic objects
+	std::map<GlobalId, CDynObj*> m_mapGid2ObjR; 		//stores remote ADO stubs
 
 	std::list<IP> m_ipClusters;
-	std::list<CVED::CDynObj*> m_lstPeers;
 	IP m_selfIp;
 	CVED::ICvedDistri* m_pCved;
 
-	std::set<GlobalId> m_setAdos;
+	std::set<GlobalId> m_setAdosL;						//stores the IDs of local dynamic objects
+	CDynObj* m_pedestrian;
 };
 
 #include "ExternalControlImpl.cpp"
