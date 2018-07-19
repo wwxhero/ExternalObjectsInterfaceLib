@@ -143,7 +143,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 
 		if (peerEdoBlk)
 		{
-			CVED::CDynObj* peerObj = pCvedDistri->LocalCreateExtObj(hBlk);
+			CVED::CDynObj* peerObj = pCvedDistri->LocalCreateEDO(hBlk);
 			id_local = peerObj->GetId();
 			GlobalId id_global = {simIP, 0};
 			m_mapGid2ObjR[id_global] = peerObj;
@@ -151,7 +151,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 		}
 		else if (ownEdoBlk)
 		{
-			CVED::CDynObj* psudoOwn = pCvedDistri->LocalCreateExtObj(hBlk);
+			CVED::CDynObj* psudoOwn = pCvedDistri->LocalCreateEDO(hBlk);
 			CPoint3D pos = psudoOwn->GetPos();
 			CVector3D tan = psudoOwn->GetTan();
 			CVector3D lat = psudoOwn->GetLat();
@@ -166,7 +166,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 		else if (ownPedBlk) //runs for hank simulator
 		{
 			//fixme: pedestrain object is considered as a vehicle
-			m_pedestrian = pCvedDistri->LocalCreatePedObj(hBlk);
+			m_pedestrian = pCvedDistri->LocalCreatePDO(hBlk);
 			CPoint3D pos = m_pedestrian->GetPos();
 			CVector3D tan = m_pedestrian->GetTan();
 			CVector3D lat = m_pedestrian->GetLat();
@@ -180,7 +180,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 		else if (peerPedBlk) //runs for nads simulator
 		{
 			//fixme: a terminal computer can only have 1 avatar
-			CVED::CDynObj* avatar = pCvedDistri->LocalCreatePedObj(hBlk);
+			CVED::CDynObj* avatar = pCvedDistri->LocalCreatePDO(hBlk);
 			GlobalId id_global = {simIP, 0};
 			m_mapGid2ObjR[id_global] = avatar;
 			int id_local = avatar->GetId();
@@ -307,7 +307,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::CreateAdoStub(GlobalId id_global
 													, const CVector3D* cpInitTran
 													, const CVector3D* cpInitLat)
 {
-	CDynObj* obj = m_pCved->LocalCreateDynObj(name, eCV_VEHICLE, cAttr, cpInitPos, cpInitTran, cpInitLat);
+	CDynObj* obj = m_pCved->LocalCreateADO(name, cAttr, cpInitPos, cpInitTran, cpInitLat);
 	TObjectPoolIdx id_local = obj->GetId();
 	m_mapLid2GidR[id_local] = id_global;
 	m_mapGid2ObjR[id_global] = obj;
