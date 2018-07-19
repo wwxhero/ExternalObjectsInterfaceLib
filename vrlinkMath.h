@@ -2,6 +2,18 @@
 #ifndef _VRLINKMATH_H
 #define _VRLINKMATH_H
 
+#include <matrix/vlQuaternion.h>
+
+#include <glm/glm.hpp>
+
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/quaternion.hpp>
+
+#include <glm/gtx/transform.hpp>
+#include <glm/gtx/transform2.hpp>
+#include <glm/gtx/euler_angles.hpp>
+
 #include <matrix/vlVector.h>
 #include <glm/glm.hpp>
 #include "utility.h"
@@ -9,7 +21,7 @@
 
 #define PI 3.1416
 const double d_epsilon = FLT_EPSILON;
-const float f_epsilon = 0.00000001;
+const float f_epsilon = 0.00000001f;
 
 inline bool Approach(double x, double t)
 {
@@ -231,7 +243,13 @@ typedef struct ExternalDriverStateTran_tag
 	DtTaitBryan ori;
 } ExternalDriverStateTran;
 
-void Transform(const cvTObjState::ExternalDriverState& src, ExternalDriverStateTran& dst)
+typedef struct ExternalDriverStateTranLO_tag
+{
+	DtVector    loc;
+	DtTaitBryan ori;
+} ExternalDriverStateTranLO;
+
+inline void Transform(const cvTObjState::ExternalDriverState& src, ExternalDriverStateTran& dst)
 {
 	dst.loc.setX(src.position.x);
 	dst.loc.setY(src.position.y);
@@ -253,7 +271,16 @@ void Transform(const cvTObjState::ExternalDriverState& src, ExternalDriverStateT
 	Frame2TaitBryan(c_t0, c_l0, src.tangent, src.lateral, dst.ori);
 }
 
-void Transform(const ExternalDriverStateTran& src, cvTObjState::VehicleState& a_dst)
+inline void TransformLO(const cvTObjState::ExternalDriverState& src, ExternalDriverStateTranLO& dst)
+{
+	dst.loc.setX(src.position.x);
+	dst.loc.setY(src.position.y);
+	dst.loc.setZ(src.position.z);
+
+	Frame2TaitBryan(c_t0, c_l0, src.tangent, src.lateral, dst.ori);
+}
+
+inline void Transform(const ExternalDriverStateTran& src, cvTObjState::VehicleState& a_dst)
 {
 	memset(&a_dst, 0, sizeof(cvTObjState::VehicleState)); //fixme: a set of vehicle attributes are ignored and being set 0
 	TVehicleState& dst = a_dst.vehState;

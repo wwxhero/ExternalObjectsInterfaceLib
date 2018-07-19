@@ -93,7 +93,7 @@ public:
 	virtual void Send(IP ip, GlobalId id_global, const cvTObjStateBuf& sb);
 	virtual bool Receive(GlobalId id_global, const cvTObjStateBuf*& sb);
 	virtual void PostDynaCalc();
-private:
+protected:
 	inline bool getEntityPub(IP ip, GlobalId id_global, EntityPublisher& pub)
 	{
 		TObjectPoolIdx objId = id_global.objId;

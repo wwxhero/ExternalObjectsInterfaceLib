@@ -18,18 +18,6 @@
 
 #include <vl/entityStateRepository.h>
 #include <vl/reflectedEntity.h>
-#include <matrix/vlQuaternion.h>
-
-
-#include <glm/glm.hpp>
-
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtc/quaternion.hpp>
-
-#include <glm/gtx/transform.hpp>
-#include <glm/gtx/transform2.hpp>
-#include <glm/gtx/euler_angles.hpp>
 
 #include "vrlinkMath.h"
 
