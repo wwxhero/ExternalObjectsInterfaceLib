@@ -49,14 +49,35 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdate(TObjectPoolIdx id_loc
 	};
 	const unsigned char* seg = (const unsigned char*)&id_global.owner;
 	int idx = recieved? 1: 0;
+	//curState->externalDriverState.visualState = 2;
+	const struct cvTObjState::ExternalDriverState& s = curState->externalDriverState;
 	TRACE(TEXT("OnGetUpdate %s id:%d from ip:[%d.%d.%d.%d]")
-								TEXT("\n\t position: [%E,%E,%E]")
-								TEXT("\n\t tangent: [%E,%E,%E]")
-								TEXT("\n\t lateral: [%E,%E,%E]\n")
-									, recFlag[idx], id_local, seg[0], seg[1], seg[2], seg[3]
-									, curState->anyState.position.x, curState->anyState.position.y, curState->anyState.position.z
-									, curState->anyState.tangent.i, curState->anyState.tangent.j, curState->anyState.tangent.k
-									, curState->anyState.lateral.i, curState->anyState.lateral.j, curState->anyState.lateral.k );
+							TEXT(", \n\t position: [%E,%E,%E]")
+							TEXT(", \n\t tangent: [%E,%E,%E]")
+							TEXT(", \n\t lateral: [%E,%E,%E]")
+							TEXT(", \n\t bbox: [%E,%E,%E], [%E,%E,%E]")
+							TEXT(", \n\t vel: [%E]")
+							TEXT(", \n\t visualState: [%d] audioState: [%d]")
+							TEXT(", \n\t acc: [%E]")
+							TEXT(", \n\t sus4: [%E, %E, %E, %E]")
+							TEXT(", \n\t velBrake: [%E]")
+							TEXT(", \n\t latAccel: [%E]")
+							TEXT(", \n\t Fidelity: [%d]")
+							TEXT(", \n\t angularVel: [%E, %E, %E]\n")
+										, recFlag[idx], id_local, seg[0], seg[1], seg[2], seg[3]
+										, s.position.x, s.position.y, s.position.z
+										, s.tangent.i, s.tangent.j, s.tangent.k
+										, s.lateral.i, s.lateral.j, s.lateral.k
+										, s.boundBox[0].x, s.boundBox[0].y, s.boundBox[0].z
+										, s.boundBox[1].x, s.boundBox[1].y, s.boundBox[1].z
+										, s.vel
+										, s.visualState, s.audioState
+										, s.acc
+										, s.suspStif, s.suspDamp, s.tireStif, s.tireDamp
+										, s.velBrake
+										, s.latAccel
+										, s.dynaFidelity
+										, s.angularVel.i, s.angularVel.j, s.angularVel.k);
 	return recieved;
 }
 
@@ -73,7 +94,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdate(TObjectPoolIdx id_lo
 							TEXT(", \n\t lateral: [%E,%E,%E]")
 							TEXT(", \n\t bbox: [%E,%E,%E], [%E,%E,%E]")
 							TEXT(", \n\t vel: [%E]")
-							TEXT(", \n\t visualState: [%E] audioState: [%E]")
+							TEXT(", \n\t visualState: [%d] audioState: [%d]")
 							TEXT(", \n\t acc: [%E]")
 							TEXT(", \n\t sus4: [%E, %E, %E, %E]")
 							TEXT(", \n\t velBrake: [%E]")
