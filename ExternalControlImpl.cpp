@@ -87,7 +87,17 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdate(TObjectPoolIdx id_lo
 	cvTObjStateBuf sb;
 	sb.contInp = *nextInput;
 	sb.state = *nextState;
-	BroadCastObj(id_local, &sb);
+
+	GlobalId id_global = {m_selfIp, id_local};
+	for (std::list<IP>::iterator it = m_multicastTo.begin(); it != m_multicastTo.end(); it ++)
+	{
+		IP ipCluster = *it;
+		unsigned char* ipv4 = (unsigned char*)&ipCluster;
+		TRACE(TEXT("Send to(IPV4):%d.%d.%d.%d\n")
+										, ipv4[0], ipv4[1], ipv4[2], ipv4[3]);
+		Send(ipCluster, id_global, sb);
+	}
+
 	const struct cvTObjState::ExternalDriverState& s = nextState->externalDriverState;
 	TRACE(TEXT("OnPushUpdate id:%d, \n\t position: [%E,%E,%E]")
 							TEXT(", \n\t tangent: [%E,%E,%E]")
@@ -123,7 +133,6 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 	std::set<IP> localhostIps;
 	GetLocalhostIps(localhostIps);
 
-	std::list<SEG> neighborsTo;
 	std::list<IP> neighborsFrom;
 	int id_local = 0; //cved object id
 	int numSelf = 0;
@@ -134,9 +143,8 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 	do
 	{
 		std::string ipStr = hBlk.GetIPV4();
-		std::string ipMask = hBlk.GetIPMask();
+
 		IP simIP = inet_addr(ipStr.c_str());
-		IP simMask = inet_addr(ipMask.c_str());
 		bool selfBlk = (localhostIps.end() != localhostIps.find(simIP))
 						&& c_type == hBlk.GetType();
 		bool neighborBlk = !selfBlk;
@@ -151,8 +159,6 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 
 		if (neighborBlk)
 		{
-			SEG seg = {simIP, simMask};
-			neighborsTo.push_back(seg);
 			neighborsFrom.push_back(simIP);
 		}
 		else //selfBlk
@@ -213,8 +219,9 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 	bool ok = (numSelf > 0); //scene includes this computer as a terminal
 	if (ok)
 	{
-		InitIpclusters(neighborsTo, m_ipClusters);
-		NetworkInitialize(m_ipClusters, neighborsFrom, hBlk.GetPort(), m_selfIp);
+		IP mcIP = inet_addr(hBlk.GetMCIP().c_str());
+		m_multicastTo.push_back(mcIP);
+		NetworkInitialize(m_multicastTo, neighborsFrom, hBlk.GetPort(), m_selfIp);
 		m_pCved = pCvedDistri;
 
 		if (edo_controller == c_type
@@ -224,44 +231,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 	return ok;
 }
 
-template<class TNetworkImpl>
-void CExternalObjectControlImpl<TNetworkImpl>::InitIpclusters(const std::list<SEG>& ips, std::list<IP>& clusters)
-{
-	typedef struct _Cluster {
-		IP ip;
-		int mag;
-	} Cluster;
-	std::map<IP, Cluster> group2cluster;
-	for (std::list<SEG>::const_iterator it = ips.begin(); it != ips.end(); it ++)
-	{
-		SEG seg = *it;
-		IP gip = seg.Group();
-		Cluster c;
-		std::map<IP, Cluster>::iterator itCluster;
-		if ((itCluster = group2cluster.find(gip)) == group2cluster.end())
-		{
-			c.ip = seg.ip;
-			c.mag = 1;
-		}
-		else
-		{
-			c.mag = (*itCluster).second.mag + 1;
-		}
-		group2cluster[gip] = c;
-	}
-	for (std::map<IP, Cluster>::iterator it = group2cluster.begin()
-		; it != group2cluster.end()
-		; it ++)
-	{
-		std::pair<IP, Cluster> p = *it;
-		IP ip;
-		if (1) //p.second.mag > 1) vrlink support for unicast is buggy, thus we just use broad cast
-			ip = p.first;
-		else
-			ip = p.second.ip;
-		clusters.push_back(ip);
-	}
-}
+
 
 template<class TNetworkImpl>
 void CExternalObjectControlImpl<TNetworkImpl>::UnInitialize()
@@ -275,7 +245,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::UnInitialize()
 	}
 	m_setAdosL.clear();
 	NetworkUninitialize();
-	m_ipClusters.clear();
+	m_multicastTo.clear();
 	m_mapLid2GidR.clear();
 
 	for (std::map<GlobalId, CDynObj*>::iterator it = m_mapGid2ObjR.begin()
@@ -291,20 +261,6 @@ void CExternalObjectControlImpl<TNetworkImpl>::UnInitialize()
 	{
 		m_pCved->LocalDeleteDynObj(m_pedestrian);
 		m_pedestrian = NULL;
-	}
-}
-
-template<class TNetworkImpl>
-void CExternalObjectControlImpl<TNetworkImpl>::BroadCastObj(TObjectPoolIdx id_local, const cvTObjStateBuf* sb)
-{
-	GlobalId id_global = {m_selfIp, id_local};
-	for (std::list<IP>::iterator it = m_ipClusters.begin(); it != m_ipClusters.end(); it ++)
-	{
-		IP ipCluster = *it;
-		unsigned char* ipv4 = (unsigned char*)&ipCluster;
-		TRACE(TEXT("Send to(IPV4):%d.%d.%d.%d\n")
-										, ipv4[0], ipv4[1], ipv4[2], ipv4[3]);
-		Send(ipCluster, id_global, *sb);
 	}
 }
 
