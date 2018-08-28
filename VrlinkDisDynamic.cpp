@@ -111,6 +111,9 @@ void CVrlinkDisDynamic::NetworkInitialize(const std::list<IP>& sendTo, const std
 	rInit.setTimeStampType((DtTimeStampType)s_disConf.stmType);
 	rInit.setDeviceAddress(ipStrSelf);
 
+	rInit.setMulticastAddresses(mcAddrStr);
+	rInit.setMulticastTtl(c_ttl);
+
 	m_cnnIn = new DtExerciseConn(rInit, &status);
 	ASSERT(DtExerciseConn::DtINIT_SUCCESS == status);
 	m_entitiesIn = new DtReflectedEntityList(m_cnnIn);
