@@ -193,7 +193,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 		else if (ownPedBlk) //runs for hank simulator
 		{
 			//fixme: pedestrain object is considered as a vehicle
-			m_pedestrian = pCvedDistri->LocalCreatePDO(hBlk);
+			m_pedestrian = pCvedDistri->LocalCreatePDO(hBlk, true);
 			CPoint3D pos = m_pedestrian->GetPos();
 			CVector3D tan = m_pedestrian->GetTan();
 			CVector3D lat = m_pedestrian->GetLat();
@@ -207,7 +207,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 		else if (peerPedBlk) //runs for nads simulator
 		{
 			//fixme: a terminal computer can only have 1 avatar
-			CVED::CDynObj* avatar = pCvedDistri->LocalCreatePDO(hBlk);
+			CVED::CDynObj* avatar = pCvedDistri->LocalCreatePDO(hBlk, false);
 			GlobalId id_global = {simIP, 0};
 			m_mapGid2ObjR[id_global] = avatar;
 			int id_local = avatar->GetId();
