@@ -27,20 +27,6 @@ public:
 	virtual bool Initialize(CHeaderDistriParseBlock& blk, CVED::ICvedDistri* pCvedDistri);
 	virtual void UnInitialize();
 private:
-	typedef struct _SEG
-	{
-	    IP ip;
-	    IP mask;
-	    IP Group()
-	    {
-			IP g = ip & mask;
-			g = g | (~mask);
-			return g;
-	    }
-	} SEG;
-	void InitIpclusters(const std::list<SEG>& ips, std::list<IP>& clusters);
-	void BroadCastObj(TObjectPoolIdx id_local, const cvTObjStateBuf* sb);
-
 	virtual void CreateAdoStub(GlobalId id_global
 							, const std::string& name
 							, const cvTObjAttr& cAttr
@@ -52,7 +38,7 @@ private:
 	std::map<TObjectPoolIdx, GlobalId> m_mapLid2GidR;	//stores all the IDs of remote dynamic objects
 	std::map<GlobalId, CDynObj*> m_mapGid2ObjR; 		//stores remote ADO stubs
 
-	std::list<IP> m_ipClusters;
+	std::list<IP> m_multicastTo;
 	IP m_selfIp;
 	CVED::ICvedDistri* m_pCved;
 

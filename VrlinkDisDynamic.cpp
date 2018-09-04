@@ -44,6 +44,7 @@ CVrlinkDisDynamic::VrLinkConf CVrlinkDisDynamic::s_disConf = {
 
 CVrlinkDisDynamic::CVrlinkDisDynamic(TERMINAL type)
 	: c_type(type)
+	, c_ttl(10)
 	, m_cnnIn(NULL)
 	, m_entitiesIn(NULL)
 {
@@ -71,18 +72,32 @@ void CVrlinkDisDynamic::NetworkInitialize(const std::list<IP>& sendTo, const std
 	sInit.setDeviceAddress(ipStrSelf);
 	DtThresholder::setDfltTranslationThreshold(s_disConf.translationThreshold);
 	DtThresholder::setDfltRotationThreshold(s_disConf.rotationThreshold);
+	std::vector<DtString> mcAddrStr;
+	std::vector<IP>		mcAddrIp;
 	char ipStr[16] = {0};
-	for (std::list<IP>::const_iterator it = sendTo.begin()
+	std::list<IP>::const_iterator it;
+	for (it = sendTo.begin()
 		; it != sendTo.end()
 		; it ++)
 	{
 		IP ip = *it;
 		unsigned char* seg = (unsigned char*) &ip;
 		sprintf(ipStr, "%u.%u.%u.%u", seg[0], seg[1], seg[2], seg[3]); //fixme: this works only for little endian structure
-		sInit.setDestinationAddress(ipStr);
+		mcAddrStr.push_back((DtString)ipStr);
+		mcAddrIp.push_back(ip);
+	}
+
+	sInit.setMulticastAddresses(mcAddrStr);
+	sInit.setMulticastTtl(c_ttl);
+
+	for (std::size_t i = 0; i < mcAddrStr.size(); i ++)
+	{
+		DtString ipDst(mcAddrStr[i]);
+		sInit.setDestinationAddress(ipDst);
+
 		DtExerciseConn* cnn = new DtExerciseConn(sInit, &status);
 		ASSERT(DtExerciseConn::DtINIT_SUCCESS == status);
-		CnnOut& out = m_cnnsOut[ip];
+		CnnOut& out = m_cnnsOut[mcAddrIp[i]];
 		out.cnn = cnn;
 
 		DtClock* clk = cnn->clock();
@@ -95,6 +110,9 @@ void CVrlinkDisDynamic::NetworkInitialize(const std::list<IP>& sendTo, const std
 	rInit.setDisVersionToSend(7);
 	rInit.setTimeStampType((DtTimeStampType)s_disConf.stmType);
 	rInit.setDeviceAddress(ipStrSelf);
+
+	rInit.setMulticastAddresses(mcAddrStr);
+	rInit.setMulticastTtl(c_ttl);
 
 	m_cnnIn = new DtExerciseConn(rInit, &status);
 	ASSERT(DtExerciseConn::DtINIT_SUCCESS == status);

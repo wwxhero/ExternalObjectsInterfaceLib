@@ -141,6 +141,7 @@ protected:
 
 public:
 	const TERMINAL c_type;
+	const int c_ttl;
 
 };
 
