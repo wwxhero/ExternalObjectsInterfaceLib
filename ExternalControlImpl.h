@@ -16,7 +16,9 @@ public:
 	virtual void PreUpdateDynamicModels();
 	virtual void PostUpdateDynamicModels();
 	virtual bool OnGetUpdate(TObjectPoolIdx id_local, cvTObjContInp* curInput, cvTObjState* curState);
+	virtual bool OnGetUpdateArt(TObjectPoolIdx idx_local, cvTObjState* curState);
 	virtual void OnPushUpdate(TObjectPoolIdx id_local, const cvTObjContInp* nextInput, const cvTObjState* nextState);
+	virtual void OnPushUpdateArt(TObjectPoolIdx idx_local, const cvTObjState* curState);
 	virtual void OnCreateADO(TObjectPoolIdx id_local
 							, const char* szName
 							, const cvTObjAttr& cAttr

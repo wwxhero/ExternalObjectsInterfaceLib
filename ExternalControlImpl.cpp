@@ -82,6 +82,13 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdate(TObjectPoolIdx id_loc
 }
 
 template<class TNetworkImpl>
+bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_local, cvTObjState* curState)
+{
+	//todo: get articulated structure data for curState
+	return false;
+}
+
+template<class TNetworkImpl>
 void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdate(TObjectPoolIdx id_local, const cvTObjContInp* nextInput, const cvTObjState* nextState)
 {
 	cvTObjStateBuf sb;
@@ -126,6 +133,13 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdate(TObjectPoolIdx id_lo
 										, s.dynaFidelity
 										, s.angularVel.i, s.angularVel.j, s.angularVel.k);
 }
+
+template<class TNetworkImpl>
+void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdateArt(TObjectPoolIdx id_local, const cvTObjState* nextState)
+{
+	//todo: push articulated structure data stored from nextState
+}
+
 
 template<class TNetworkImpl>
 bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBlock& hBlk, CVED::ICvedDistri* pCvedDistri)
@@ -204,7 +218,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 			state0.externalDriverState.tangent = t;
 			state0.externalDriverState.lateral = l;
 		}
-		else if (peerPedBlk) //runs for nads simulator
+		else if (peerPedBlk)
 		{
 			//fixme: a terminal computer can only have 1 avatar
 			CVED::CDynObj* avatar = pCvedDistri->LocalCreatePDO(hBlk, false);
