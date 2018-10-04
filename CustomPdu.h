@@ -3,7 +3,7 @@
 #include <vl/exerciseConnDIS.h>
 #include <vl/entityStatePdu.h>
 #include "INetworkDynamic.h"
-#include "hcsmobject.h"
+#include "cvedpub.h"
 #include "cvedstrc.h"
 #define PDU_STRLEN 64
 class CCustomPdu;
