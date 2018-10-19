@@ -145,8 +145,8 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_
 	const char** szNames = NULL;
 	unsigned int numNames = 0;
 	CDynObj* pDynObj = m_mapGid2ObjR[id_global];
-	ASSERT(cvEObjType::eCV_AVATAR == pDynObj->GetType());
-	CAvatarObj* pAvatar = static_cast<CAvatarObj*>(pDynObj);
+	ASSERT(cvEObjType::eCV_EXTERNAL_AVATAR == pDynObj->GetType());
+	CExternalAvatarObj* pAvatar = static_cast<CExternalAvatarObj*>(pDynObj);
 	pAvatar->BFTAlloc(pAvatar->GetName(), &szNames, &numNames);
 	TVector3D* angles = new TVector3D[numNames];
 	pAvatar->BFTFillAnglesOut(angles, numNames);
@@ -249,8 +249,8 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdateArt(TObjectPoolIdx id
 										, s.dynaFidelity
 										, s.angularVel.i, s.angularVel.j, s.angularVel.k);
 	CDynObj* pDynObj = m_mapGid2ObjR[id_global];
-	ASSERT(cvEObjType::eCV_AVATAR == pDynObj->GetType());
-	CAvatarObj* pAvatar = static_cast<CAvatarObj*>(pDynObj);
+	ASSERT(cvEObjType::eCV_EXTERNAL_AVATAR == pDynObj->GetType());
+	CExternalAvatarObj* pAvatar = static_cast<CExternalAvatarObj*>(pDynObj);
 
 	const char** szNames = NULL;
 	unsigned int numNames = 0;
