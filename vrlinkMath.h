@@ -249,6 +249,16 @@ typedef struct ExternalDriverStateTranLO_tag
 	DtTaitBryan ori;
 } ExternalDriverStateTranLO;
 
+typedef struct AvatarStateTran_tag
+{
+	DtVector32  vel;
+	DtVector32  acc;
+	DtVector32  rot;
+	DtVector    loc;
+	DtTaitBryan ori;
+	TAvatarJoint*     child_first;
+} AvatarStateTran;
+
 inline void Transform(const cvTObjState::ExternalDriverState& src, ExternalDriverStateTran& dst)
 {
 	dst.loc.setX(src.position.x);
@@ -308,6 +318,16 @@ inline void Transform(const ExternalDriverStateTran& src, cvTObjState::VehicleSt
 	dst.rollRate = rad2deg(angularVel.i);
 	dst.pitchRate = rad2deg(angularVel.j);
 	dst.yawRate = rad2deg(angularVel.k);
+}
+
+inline void Transform(const cvTObjState::AvatarState& src, AvatarStateTran& dst)
+{
+
+}
+
+inline void Transform(const AvatarStateTran& src, cvTObjState::AvatarState& dst)
+{
+
 }
 
 #endif

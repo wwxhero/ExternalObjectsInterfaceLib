@@ -19,6 +19,11 @@
 #include <vl/entityStateRepository.h>
 #include <vl/reflectedEntity.h>
 
+#include <vlpi/articulatedPart.h>
+
+#include <queue>
+
+
 #include "vrlinkMath.h"
 
 #include "PduExtObj.h"
@@ -197,7 +202,77 @@ void CVrlinkDisDynamic::OnReceiveRawPdu( CCustomPdu* pdu, void* p)
 	pExtObj->printData();
 #endif
 }
+void CVrlinkDisDynamic::SendArt(IP ip, GlobalId id_global, const cvTObjState* s)
+{
+	EntityPublisher epb;
+	bool exists_a_pub = getEntityPub(ip, id_global, epb);
+	ASSERT(exists_a_pub);
+	if (!exists_a_pub)
+		return;
+	AvatarStateTran stateTran;
+	Transform(s->avatarState, stateTran);
 
+#ifdef _VERIFY_TRANSFORM
+	const cvTObjState::AvatarState& es = s->externalDriverState;
+	glm::vec3 angularVel(stateTran.rot.x(), stateTran.rot.y(), stateTran.rot.z());
+	float aL = rad2deg(glm::length(angularVel));
+	glm::vec3 aDir = glm::normalize(angularVel);
+	cvTObjState::AvatarState es_prime;
+	Transform(stateTran, es_prime);
+	TRACE(TEXT("Send id:%d, \n\t position: [%E,%E,%E]->[%E,%E,%E]")
+							TEXT(", \n\t tangent: [%E,%E,%E]->[%E,%E,%E]")
+							TEXT(", \n\t lateral: [%E,%E,%E]->[%E,%E,%E]")
+							TEXT(", \n\t vel: [%E]->[%E]")
+							TEXT(", \n\t acc: [%E]->[%E]")
+							TEXT(", \n\t latAccel: [%E]->[%E]")
+							TEXT(", \n\t angularVel: [%E, %E, %E]->[%E, %E, %E] = [%E]*<%E, %E, %E>\n")
+							TEXT(", \n\t euler: [%E, %E, %E]\n")
+				, 0
+				, es.position.x, es.position.y, es.position.z, es_prime.position.x, es_prime.position.y, es_prime.position.z
+				, es.tangent.i, es.tangent.j, es.tangent.k, es_prime.tangent.i, es_prime.tangent.j, es_prime.tangent.k
+				, es.lateral.i, es.lateral.j, es.lateral.k, es_prime.lateral.i, es_prime.lateral.j, es_prime.lateral.k
+				, es.vel, es_prime.vel
+				, es.acc, es_prime.acc
+				, es.latAccel, es_prime.latAccel
+				, es.angularVel.i, es.angularVel.j, es.angularVel.k, es_prime.angularVel.i, es_prime.angularVel.j, es_prime.angularVel.k, aL, aDir.x, aDir.y, aDir.z
+				, stateTran.ori.phi(), stateTran.ori.theta(), stateTran.ori.psi());
+#endif
+	epb.view->setVelocity(stateTran.vel);
+	epb.view->setAcceleration(stateTran.acc);
+	epb.view->setRotationalVelocity(stateTran.rot);
+	epb.view->setLocation(stateTran.loc);
+	epb.view->setOrientation(stateTran.ori);
+	//traverse the joint angle tree: for sending the articulated structure joints
+	DtEntityStateRepository* entity = epb.pub->esr();
+	DtArticulatedPartCollection* artPartCol = entity->artPartList();
+	TAvatarJoint root = VIRTUAL_ROOT(stateTran.child_first);
+	std::queue<TAvatarJoint*> bft_queue;
+	bft_queue.push(&root);
+	while (!bft_queue.empty())
+	{
+		TAvatarJoint* j_p = bft_queue.front();
+		bft_queue.pop();
+		TAvatarJoint* j_c = j_p->child_first;
+		while (NULL != j_c)
+		{
+			bft_queue.push(j_c);
+			DtArticulatedPart& art_c = artPartCol->getPart(j_c->type);
+			art_c.setParameter(DtApAzimuth, j_c->angle.k);
+			art_c.setParameter(DtApAzimuthRate, j_c->angleRate.k);
+			art_c.setParameter(DtApElevation, j_c->angle.j);
+			art_c.setParameter(DtApElevationRate, j_c->angleRate.j);
+			art_c.setParameter(DtApRotation, j_c->angle.i);
+			art_c.setParameter(DtApRotationRate, j_c->angleRate.i);
+			j_c = j_c->sibling_next;
+		}
+	}
+
+	//CPduExtObj pduObj(id_global, sb.state.externalDriverState);
+	//epb.cnn->sendStamped(pduObj);
+
+	unsigned char* seg = (unsigned char*)&ip;
+	TRACE(TEXT("vrlink: send to [%d.%d.%d.%d]\n"), seg[0], seg[1], seg[2], seg[3]);
+}
 void CVrlinkDisDynamic::Send(IP ip, GlobalId id_global, const cvTObjStateBuf& sb)
 {
 	EntityPublisher epb;
@@ -261,6 +336,17 @@ bool CVrlinkDisDynamic::Receive(GlobalId id_global, const cvTObjStateBuf*& sb)
 		return false;
 }
 
+bool CVrlinkDisDynamic::ReceiveArt(GlobalId id_global, cvTObjState* s)
+{
+	const cvTObjStateBuf* sb = NULL;
+	bool result = Receive(id_global, sb);
+	if (result)
+	{
+		*s = sb->state;
+	}
+	return result;
+}
+
 
 void CVrlinkDisDynamic::PreDynaCalc()
 {
@@ -307,17 +393,62 @@ void CVrlinkDisDynamic::PreDynaCalc()
 		esr->setAlgorithm((DtDeadReckonTypes)s_disConf.drAlgor);
 		esr->useSmoother(s_disConf.smoothOn);
 		DtTopoView view(esr, s_disConf.latitude, s_disConf.longitude);
-		ExternalDriverStateTran stateTran;
-		stateTran.vel = view.velocity();
-		stateTran.acc = view.acceleration();
-		stateTran.rot = view.rotationalVelocity();
-		stateTran.loc = view.location();
-		stateTran.ori = view.orientation();
+		DtArticulatedPartCollection* artPartCol = esr->artPartList();
+		DtArticulatedPartCollection::const_iterator artPartIter = artPartCol->begin();
+		if (artPartIter != artPartCol->end())
+		{
+			//traverse the joint angle tree: for receiving the articulated structure joints
+			DtArticulatedPartCollection* artPartCol = esr->artPartList();
+			cvTObjStateBuf* sb = esb->sb;
+			cvTObjState::AvatarState* s = (cvTObjState::AvatarState*)&sb->state;
+			TAvatarJoint root = VIRTUAL_ROOT(s->child_first);
+			std::queue<TAvatarJoint*> bft_queue;
+			bft_queue.push(&root);
+			while (!bft_queue.empty())
+			{
+				TAvatarJoint* j_p = bft_queue.front();
+				bft_queue.pop();
+				TAvatarJoint* j_c = j_p->child_first;
+				while (NULL != j_c)
+				{
+					bft_queue.push(j_c);
 
-		cvTObjStateBuf* sb = esb->sb;
-		cvTObjState::VehicleState* s = (cvTObjState::VehicleState*)&sb->state;
-		Transform(stateTran, *s);
-		esb->updated = true;
+					DtArticulatedPart& art_c = artPartCol->getPart(j_c->type);
+					j_c->angle.k = art_c.getParameterValue(DtApAzimuth);
+					j_c->angleRate.k = art_c.getParameterValue(DtApAzimuthRate);
+					j_c->angle.j = art_c.getParameterValue(DtApElevation);
+					j_c->angleRate.j = art_c.getParameterValue(DtApElevationRate);
+					j_c->angle.i = art_c.getParameterValue(DtApRotation);
+					j_c->angleRate.i = art_c.getParameterValue(DtApRotationRate);
+
+					j_c = j_c->sibling_next;
+				}
+			}
+
+			AvatarStateTran stateTran;
+			stateTran.vel = view.velocity();
+			stateTran.acc = view.acceleration();
+			stateTran.rot = view.rotationalVelocity();
+			stateTran.loc = view.location();
+			stateTran.ori = view.orientation();
+			stateTran.child_first = s->child_first;
+			Transform(stateTran, *s);
+			esb->updated = true;
+		}
+		else
+		{
+			ExternalDriverStateTran stateTran;
+			stateTran.vel = view.velocity();
+			stateTran.acc = view.acceleration();
+			stateTran.rot = view.rotationalVelocity();
+			stateTran.loc = view.location();
+			stateTran.ori = view.orientation();
+			cvTObjStateBuf* sb = esb->sb;
+			cvTObjState::VehicleState* s = (cvTObjState::VehicleState*)&sb->state;
+			Transform(stateTran, *s);
+			esb->updated = true;
+		}
+
 	}
 
 }

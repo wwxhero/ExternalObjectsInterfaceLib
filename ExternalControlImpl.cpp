@@ -85,7 +85,80 @@ template<class TNetworkImpl>
 bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_local, cvTObjState* curState)
 {
 	//todo: get articulated structure data for curState
-	return false;
+	std::map<TObjectPoolIdx, GlobalId>::iterator it = m_mapLid2GidR.find(id_local);
+	if (it == m_mapLid2GidR.end())
+	{
+		//assert(0);
+		return false;
+	}
+	GlobalId id_global = (*it).second;
+	cvTObjState nextState;
+	bool recieved = ReceiveArt(id_global, &nextState);
+	if (recieved)
+	{
+		cvTObjState::AvatarState* s_np = (cvTObjState::AvatarState*)(&nextState.avatarState);
+		cvTObjState::AvatarState* s_n  = (cvTObjState::AvatarState*)(&curState->avatarState);
+		for (int i = 0; i < 2; i ++)
+		{
+			s_np->boundBox[i].x = s_n->boundBox[i].x - s_n->position.x + s_np->position.x;
+			s_np->boundBox[i].y = s_n->boundBox[i].y - s_n->position.y + s_np->position.y;
+			s_np->boundBox[i].z = s_n->boundBox[i].z - s_n->position.z + s_np->position.z;
+		}
+		memcpy(curState, &nextState, sizeof(cvTObjState));
+	}
+#ifdef _DEBUG
+	const TCHAR* recFlag[] = {
+		TEXT("NReceived")
+		, TEXT("Received")
+	};
+	const unsigned char* seg = (const unsigned char*)&id_global.owner;
+	int idx = recieved? 1: 0;
+	//curState->externalDriverState.visualState = 2;
+	const struct cvTObjState::AvatarState& s = curState->avatarState;
+	TRACE(TEXT("OnGetUpdate %s id:%d from ip:[%d.%d.%d.%d]")
+							TEXT(", \n\t position: [%E,%E,%E]")
+							TEXT(", \n\t tangent: [%E,%E,%E]")
+							TEXT(", \n\t lateral: [%E,%E,%E]")
+							TEXT(", \n\t bbox: [%E,%E,%E], [%E,%E,%E]")
+							TEXT(", \n\t vel: [%E]")
+							TEXT(", \n\t visualState: [%d] audioState: [%d]")
+							TEXT(", \n\t acc: [%E]")
+							TEXT(", \n\t sus4: [%E, %E, %E, %E]")
+							TEXT(", \n\t velBrake: [%E]")
+							TEXT(", \n\t latAccel: [%E]")
+							TEXT(", \n\t Fidelity: [%d]")
+							TEXT(", \n\t angularVel: [%E, %E, %E]\n")
+										, recFlag[idx], id_local, seg[0], seg[1], seg[2], seg[3]
+										, s.position.x, s.position.y, s.position.z
+										, s.tangent.i, s.tangent.j, s.tangent.k
+										, s.lateral.i, s.lateral.j, s.lateral.k
+										, s.boundBox[0].x, s.boundBox[0].y, s.boundBox[0].z
+										, s.boundBox[1].x, s.boundBox[1].y, s.boundBox[1].z
+										, s.vel
+										, s.visualState, s.audioState
+										, s.acc
+										, s.suspStif, s.suspDamp, s.tireStif, s.tireDamp
+										, s.velBrake
+										, s.latAccel
+										, s.dynaFidelity
+										, s.angularVel.i, s.angularVel.j, s.angularVel.k);
+	const char** szNames = NULL;
+	unsigned int numNames = 0;
+	CDynObj* pDynObj = m_mapGid2ObjR[id_global];
+	ASSERT(cvEObjType::eCV_AVATAR == pDynObj->GetType());
+	CAvatarObj* pAvatar = static_cast<CAvatarObj*>(pDynObj);
+	pAvatar->BFTAlloc(pAvatar->GetName(), &szNames, &numNames);
+	TVector3D* angles = new TVector3D[numNames];
+	pAvatar->BFTFillAnglesOut(angles, numNames);
+	TRACE(TEXT(", \n\t joints:"));
+	for (int i_n = 0; i_n < numNames; i_n ++)
+	{
+		TRACE(TEXT(", \n\t\t%d:%s=<%E, %E, %E>"), i_n, szNames[i_n], angles[i_n].i, angles[i_n].j, angles[i_n].k);
+	}
+	delete [] angles;
+	pAvatar->BFTFree(szNames, numNames);
+#endif
+	return recieved;
 }
 
 template<class TNetworkImpl>
@@ -138,6 +211,60 @@ template<class TNetworkImpl>
 void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdateArt(TObjectPoolIdx id_local, const cvTObjState* nextState)
 {
 	//todo: push articulated structure data stored from nextState
+	GlobalId id_global = {m_selfIp, id_local};
+	for (std::list<IP>::iterator it = m_multicastTo.begin(); it != m_multicastTo.end(); it ++)
+	{
+		IP ipCluster = *it;
+		unsigned char* ipv4 = (unsigned char*)&ipCluster;
+		TRACE(TEXT("Send articulated to(IPV4):%d.%d.%d.%d\n")
+										, ipv4[0], ipv4[1], ipv4[2], ipv4[3]);
+		SendArt(ipCluster, id_global, nextState);
+	}
+#ifdef _DEBUG
+	const struct cvTObjState::AvatarState& s = nextState->avatarState;
+	TRACE(TEXT("OnPushUpdate id:%d, \n\t position: [%E,%E,%E]")
+							TEXT(", \n\t tangent: [%E,%E,%E]")
+							TEXT(", \n\t lateral: [%E,%E,%E]")
+							TEXT(", \n\t bbox: [%E,%E,%E], [%E,%E,%E]")
+							TEXT(", \n\t vel: [%E]")
+							TEXT(", \n\t visualState: [%d] audioState: [%d]")
+							TEXT(", \n\t acc: [%E]")
+							TEXT(", \n\t sus4: [%E, %E, %E, %E]")
+							TEXT(", \n\t velBrake: [%E]")
+							TEXT(", \n\t latAccel: [%E]")
+							TEXT(", \n\t Fidelity: [%d]")
+							TEXT(", \n\t angularVel: [%E, %E, %E]")
+										, id_local
+										, s.position.x, s.position.y, s.position.z
+										, s.tangent.i, s.tangent.j, s.tangent.k
+										, s.lateral.i, s.lateral.j, s.lateral.k
+										, s.boundBox[0].x, s.boundBox[0].y, s.boundBox[0].z
+										, s.boundBox[1].x, s.boundBox[1].y, s.boundBox[1].z
+										, s.vel
+										, s.visualState, s.audioState
+										, s.acc
+										, s.suspStif, s.suspDamp, s.tireStif, s.tireDamp
+										, s.velBrake
+										, s.latAccel
+										, s.dynaFidelity
+										, s.angularVel.i, s.angularVel.j, s.angularVel.k);
+	CDynObj* pDynObj = m_mapGid2ObjR[id_global];
+	ASSERT(cvEObjType::eCV_AVATAR == pDynObj->GetType());
+	CAvatarObj* pAvatar = static_cast<CAvatarObj*>(pDynObj);
+
+	const char** szNames = NULL;
+	unsigned int numNames = 0;
+	pAvatar->BFTAlloc(pAvatar->GetName(), &szNames, &numNames);
+	TVector3D* angles = new TVector3D[numNames];
+	pAvatar->BFTFillAnglesOut(angles, numNames);
+	TRACE(TEXT(", \n\t joints:"));
+	for (int i_n = 0; i_n < numNames; i_n ++)
+	{
+		TRACE(TEXT(", \n\t\t%d:%s=<%E, %E, %E>"), i_n, szNames[i_n], angles[i_n].i, angles[i_n].j, angles[i_n].k);
+	}
+	delete [] angles;
+	pAvatar->BFTFree(szNames, numNames);
+#endif
 }
 
 

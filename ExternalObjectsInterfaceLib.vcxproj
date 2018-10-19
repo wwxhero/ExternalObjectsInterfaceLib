@@ -188,6 +188,7 @@
     <ClCompile Include="VrlinkDisDynamic.cpp" />
     <ClCompile Include="VrlinkDisEdoCtrl.cpp" />
     <ClCompile Include="VrlinkDisPedCtrl.cpp" />
+    <ClCompile Include="vrlinkMath.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\IgComm\IgComm.vcxproj">
