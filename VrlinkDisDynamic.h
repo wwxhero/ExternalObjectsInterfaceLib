@@ -17,8 +17,8 @@
 #include <set>
 #include "inetworkdynamic.h"
 #include "Clock.h"
-#include "CustomPdu.h"
 #include "LibExternalObjectIfNetwork.h"
+#include "PduExtObj.h"
 
 class DtExerciseConn;
 class DtEntityPublisher;
@@ -124,7 +124,7 @@ protected:
 	}
 protected:
 	std::map<IP, CnnOut> m_cnnsOut;
-
+	std::map<GlobalId, CPduExtObj::RawState> m_rsCached;
 	DtExerciseConn* m_cnnIn;
 	DtReflectedEntityList* m_entitiesIn;
 
