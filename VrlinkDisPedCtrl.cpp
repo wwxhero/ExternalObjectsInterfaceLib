@@ -20,21 +20,20 @@ CVrlinkDisPedCtrl::~CVrlinkDisPedCtrl(void)
 }
 
 
-void CVrlinkDisPedCtrl::Send(IP ip, GlobalId id_global, const cvTObjStateBuf& sb)
+void CVrlinkDisPedCtrl::Send(IP ip, GlobalId id_global, const cvTObjState* s)
 {
 	EntityPublisher epb;
 	bool exists_a_pub = getEntityPub(ip, id_global, epb);
 	ASSERT(exists_a_pub);
 	if (!exists_a_pub)
 		return;
-	const cvTObjState* s = (const cvTObjState*)(&sb.state);
 	ExternalDriverStateTranLO stateTran;
 	TransformLO(s->externalDriverState, stateTran);
 
 	epb.view->setLocation(stateTran.loc);
 	epb.view->setOrientation(stateTran.ori);
 
-	CPduExtObj pduObj(id_global, sb.state.externalDriverState);
+	CPduExtObj pduObj(id_global, s->externalDriverState);
 	epb.cnn->sendStamped(pduObj);
 
 	unsigned char* seg = (unsigned char*)&ip;

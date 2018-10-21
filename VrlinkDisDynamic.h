@@ -64,11 +64,6 @@ protected:
 		DtTopoView* view;
 	} EntityPub;
 
-	typedef struct StateBuffer_tag
-	{
-		cvTObjStateBuf* sb;
-		bool updated;
-	} EntityState;
 
 	typedef struct CnnOut_tag
 	{
@@ -90,8 +85,8 @@ public:
 	virtual void NetworkInitialize(const std::list<IP>& sendTo, const std::list<IP>& receiveFrom, int port, IP self);
 	virtual void NetworkUninitialize();
 	virtual void PreDynaCalc();
-	virtual void Send(IP ip, GlobalId id_global, const cvTObjStateBuf& sb);
-	virtual bool Receive(GlobalId id_global, const cvTObjStateBuf*& sb);
+	virtual void Send(IP ip, GlobalId id_global, const cvTObjState* s);
+	virtual bool Receive(GlobalId id_global, cvTObjState* s);
 	virtual void PostDynaCalc();
 protected:
 	inline bool getEntityPub(IP ip, GlobalId id_global, EntityPublisher& pub)
@@ -129,7 +124,6 @@ protected:
 	}
 protected:
 	std::map<IP, CnnOut> m_cnnsOut;
-	std::map<GlobalId, EntityState> m_statesIn;
 
 	DtExerciseConn* m_cnnIn;
 	DtReflectedEntityList* m_entitiesIn;

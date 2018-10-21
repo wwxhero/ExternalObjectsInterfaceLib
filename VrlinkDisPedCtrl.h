@@ -6,6 +6,6 @@ class CVrlinkDisPedCtrl :
 public:
 	CVrlinkDisPedCtrl(void);
 	virtual ~CVrlinkDisPedCtrl(void);
-	virtual void Send(IP ip, GlobalId id_global, const cvTObjStateBuf& sb);
+	virtual void Send(IP ip, GlobalId id_global, const cvTObjState* s);
 };
 

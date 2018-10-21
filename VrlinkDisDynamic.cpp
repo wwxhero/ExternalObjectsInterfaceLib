@@ -122,16 +122,6 @@ void CVrlinkDisDynamic::NetworkInitialize(const std::list<IP>& sendTo, const std
 	CCustomPdu::StartListening<CPduExtObj, (DtPduKind)CCustomPdu::ExtObjState>(m_cnnIn, OnReceiveRawPdu, this);
 
 	m_self = self;
-	for (std::list<IP>::const_iterator itN = receiveFrom.begin()
-		; itN != receiveFrom.end()
-		; itN ++)
-	{
-		GlobalId id_neighbor = {*itN, 0}; //fixme: for a terminal is one of {ado ctrl}, it doesn't have a state slot for [0] object
-		EntityState& state = m_statesIn[id_neighbor];
-		state.updated = false;
-		state.sb = new cvTObjStateBuf;
-		memset(state.sb, 0, sizeof(cvTObjStateBuf));
-	}
 }
 
 void CVrlinkDisDynamic::NetworkUninitialize()
@@ -157,15 +147,6 @@ void CVrlinkDisDynamic::NetworkUninitialize()
 	CCustomPdu::StopListening<(DtPduKind)CCustomPdu::ExtObjState>(m_cnnIn, OnReceiveRawPdu, this);
 	delete m_cnnIn;
 
-	for (std::map<GlobalId, EntityState>::iterator it = m_statesIn.begin()
-		; it != m_statesIn.end()
-		; it ++)
-	{
-		std::pair<GlobalId, EntityState> p = *it;
-		EntityState b = p.second;
-		delete b.sb;
-	}
-
 }
 
 void CVrlinkDisDynamic::OnReceiveRawPdu( CCustomPdu* pdu, void* p)
@@ -173,39 +154,39 @@ void CVrlinkDisDynamic::OnReceiveRawPdu( CCustomPdu* pdu, void* p)
 	CVrlinkDisDynamic* pThis = reinterpret_cast<CVrlinkDisDynamic*>(p);
 	CPduExtObj* pExtObj = static_cast<CPduExtObj*>(pdu);
 	const CPduExtObj::RawState& rs = pExtObj->GetState();
-	std::map<GlobalId, EntityState>::iterator it = pThis->m_statesIn.find(rs.id);
-	EntityState* esb = NULL;
-	if (pThis->m_statesIn.end() != it)
-		esb = &(*it).second;
-	if (NULL != esb)
-	{
-		cvTObjState::ExternalDriverState& s = esb->sb->state.externalDriverState;
-		s.visualState = rs.visualState;
-		s.audioState = rs.audioState;
-		s.suspStif = rs.suspStif;
-		s.suspDamp = rs.suspDamp;
-		s.tireStif = rs.tireStif;
-		s.tireDamp = rs.tireDamp;
-		s.velBrake = rs.velBrake;
-		memcpy(s.posHint, rs.posHint, sizeof(rs.posHint));
-		s.dynaFidelity = rs.dynaFidelity;
-		esb->updated = true;
-		unsigned char* seg = (unsigned char*)&rs.id.owner;
-		TRACE(TEXT("vrlink:raw pdu received from %d.%d.%d.%d:[%d]\n"), seg[0], seg[1], seg[2], seg[3], rs.id.objId);
-	}
+	// cache raw state into rs.id slot
+	// std::map<GlobalId, EntityRef>::iterator it = pThis->m_statesIn.find(rs.id);
+	// EntityRef* esb = NULL;
+	// if (pThis->m_statesIn.end() != it)
+	// 	esb = &(*it).second;
+	// if (NULL != esb)
+	// {
+	// 	cvTObjState::ExternalDriverState& s = esb->sb->state.externalDriverState;
+	// 	s.visualState = rs.visualState;
+	// 	s.audioState = rs.audioState;
+	// 	s.suspStif = rs.suspStif;
+	// 	s.suspDamp = rs.suspDamp;
+	// 	s.tireStif = rs.tireStif;
+	// 	s.tireDamp = rs.tireDamp;
+	// 	s.velBrake = rs.velBrake;
+	// 	memcpy(s.posHint, rs.posHint, sizeof(rs.posHint));
+	// 	s.dynaFidelity = rs.dynaFidelity;
+	// 	esb->updated = true;
+	// 	unsigned char* seg = (unsigned char*)&rs.id.owner;
+	// 	TRACE(TEXT("vrlink:raw pdu received from %d.%d.%d.%d:[%d]\n"), seg[0], seg[1], seg[2], seg[3], rs.id.objId);
+	// }
 #ifdef _DEBUG
 	pExtObj->printData();
 #endif
 }
 
-void CVrlinkDisDynamic::Send(IP ip, GlobalId id_global, const cvTObjStateBuf& sb)
+void CVrlinkDisDynamic::Send(IP ip, GlobalId id_global, const cvTObjState* s)
 {
 	EntityPublisher epb;
 	bool exists_a_pub = getEntityPub(ip, id_global, epb);
 	ASSERT(exists_a_pub);
 	if (!exists_a_pub)
 		return;
-	const cvTObjState* s = (const cvTObjState*)(&sb.state);
 	ExternalDriverStateTran stateTran;
 	Transform(s->externalDriverState, stateTran);
 
@@ -247,18 +228,32 @@ void CVrlinkDisDynamic::Send(IP ip, GlobalId id_global, const cvTObjStateBuf& sb
 	TRACE(TEXT("vrlink: send to [%d.%d.%d.%d]\n"), seg[0], seg[1], seg[2], seg[3]);
 }
 
-bool CVrlinkDisDynamic::Receive(GlobalId id_global, const cvTObjStateBuf*& sb)
+bool CVrlinkDisDynamic::Receive(GlobalId id_global, cvTObjState* state)
 {
-	std::map<GlobalId, EntityState>::iterator it = m_statesIn.find(id_global);
-	if (it != m_statesIn.end())
+	//to be completed.
+	DtObjectId eid = GlobalId2VrlinkId(id_global);
+	DtReflectedEntity* e = m_entitiesIn->lookup(eid);
+	bool received = (NULL != e);
+	if (received)
 	{
-		EntityState esb = (*it).second;
-		if (esb.updated)
-			sb = esb.sb;
-		return esb.updated;
+		unsigned char* ip = (unsigned char*)&id_global.owner;
+		TRACE(TEXT("vrlink: received from [%d.%d.%d.%d]\n"), ip[0], ip[1], ip[2], ip[3]);
+
+		DtEntityStateRepository *esr = e->entityStateRep();
+		esr->setAlgorithm((DtDeadReckonTypes)s_disConf.drAlgor);
+		esr->useSmoother(s_disConf.smoothOn);
+		DtTopoView view(esr, s_disConf.latitude, s_disConf.longitude);
+		ExternalDriverStateTran stateTran;
+		stateTran.vel = view.velocity();
+		stateTran.acc = view.acceleration();
+		stateTran.rot = view.rotationalVelocity();
+		stateTran.loc = view.location();
+		stateTran.ori = view.orientation();
+
+		cvTObjState::VehicleState* s = (cvTObjState::VehicleState*)&state->vehicleState;
+		Transform(stateTran, *s);
 	}
-	else
-		return false;
+	return received;
 }
 
 
@@ -276,49 +271,41 @@ void CVrlinkDisDynamic::PreDynaCalc()
 		cnn->drainInput();
 	}
 	//pre calc for receiving
-	for (std::map<GlobalId, EntityState>::iterator it = m_statesIn.begin()
-		; it != m_statesIn.end()
-		; it ++)
-	{
-		EntityState& p = (*it).second;
-		p.updated = false;
-	}
-
 	m_cnnIn->clock()->setSimTime(simTime);
 	m_cnnIn->drainInput();
-	DtReflectedEntity* e = m_entitiesIn->first();
-	for(; e != NULL; e = e->next())
-	{
-		const DtObjectId& id = e->entityId();
-		GlobalId id_global = VrlinkId2GlobalId(id);
-		std::map<GlobalId, EntityState>::iterator it = m_statesIn.find(id_global);
-		EntityState* esb = NULL;
-		if (m_statesIn.end() != it) //no state slot allocated in state buffer
-		{
-			esb = &(*it).second;
-		}
-		else
-			continue;
+	// DtReflectedEntity* e = m_entitiesIn->first();
+	// for(; e != NULL; e = e->next())
+	// {
+	// 	const DtObjectId& id = e->entityId();
+	// 	GlobalId id_global = VrlinkId2GlobalId(id);
+	// 	std::map<GlobalId, EntityRef>::iterator it = m_statesIn.find(id_global);
+	// 	EntityRef* esb = NULL;
+	// 	if (m_statesIn.end() != it) //no state slot allocated in state buffer
+	// 	{
+	// 		esb = &(*it).second;
+	// 	}
+	// 	else
+	// 		continue;
 
-		unsigned char* ip = (unsigned char*)&id_global.owner;
-		TRACE(TEXT("vrlink: received from [%d.%d.%d.%d]\n"), ip[0], ip[1], ip[2], ip[3]);
+	// 	unsigned char* ip = (unsigned char*)&id_global.owner;
+	// 	TRACE(TEXT("vrlink: received from [%d.%d.%d.%d]\n"), ip[0], ip[1], ip[2], ip[3]);
 
-		DtEntityStateRepository *esr = e->entityStateRep();
-		esr->setAlgorithm((DtDeadReckonTypes)s_disConf.drAlgor);
-		esr->useSmoother(s_disConf.smoothOn);
-		DtTopoView view(esr, s_disConf.latitude, s_disConf.longitude);
-		ExternalDriverStateTran stateTran;
-		stateTran.vel = view.velocity();
-		stateTran.acc = view.acceleration();
-		stateTran.rot = view.rotationalVelocity();
-		stateTran.loc = view.location();
-		stateTran.ori = view.orientation();
+	// 	DtEntityStateRepository *esr = e->entityStateRep();
+	// 	esr->setAlgorithm((DtDeadReckonTypes)s_disConf.drAlgor);
+	// 	esr->useSmoother(s_disConf.smoothOn);
+	// 	DtTopoView view(esr, s_disConf.latitude, s_disConf.longitude);
+	// 	ExternalDriverStateTran stateTran;
+	// 	stateTran.vel = view.velocity();
+	// 	stateTran.acc = view.acceleration();
+	// 	stateTran.rot = view.rotationalVelocity();
+	// 	stateTran.loc = view.location();
+	// 	stateTran.ori = view.orientation();
 
-		cvTObjStateBuf* sb = esb->sb;
-		cvTObjState::VehicleState* s = (cvTObjState::VehicleState*)&sb->state;
-		Transform(stateTran, *s);
-		esb->updated = true;
-	}
+	// 	cvTObjStateBuf* sb = esb->sb;
+	// 	cvTObjState::VehicleState* s = (cvTObjState::VehicleState*)&sb->state;
+	// 	Transform(stateTran, *s);
+	// 	esb->updated = true;
+	// }
 
 }
 

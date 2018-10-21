@@ -26,8 +26,8 @@ public:
 	virtual void NetworkInitialize(const std::list<IP>& senders, const std::list<IP>& receivers, int port, IP self) = 0;
 	virtual void NetworkUninitialize() = 0;
 	virtual void PreDynaCalc() = 0;
-	virtual void Send(IP ip, GlobalId id_global, const cvTObjStateBuf& sb) = 0;
-	virtual bool Receive(GlobalId id_global, const cvTObjStateBuf*& sb) = 0;
+	virtual void Send(IP ip, GlobalId id_global, const cvTObjState* s) = 0;
+	virtual bool Receive(GlobalId id_global, cvTObjState* s) = 0;
 	virtual void Notify_OnNewAdo(GlobalId id
 							, const char* szName
 							, const cvTObjAttr& cAttr
