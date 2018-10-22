@@ -24,8 +24,7 @@ class DtExerciseConn;
 class DtEntityPublisher;
 class DtTopoView;
 class DtReflectedEntityList;
-union cvTObjState;
-struct cvTObjStateBuf;
+
 
 
 class CVrlinkDisDynamic :

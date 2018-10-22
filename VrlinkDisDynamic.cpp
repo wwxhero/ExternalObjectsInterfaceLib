@@ -28,7 +28,7 @@ CVrlinkDisDynamic::VrLinkConf CVrlinkDisDynamic::s_disConf = {
 	, DtTimeStampRelative
 	, false
 	, 0.05						//translation threshold in meter
-	, 0.05236					//rotation threshold in radian = 3 degree
+	, 0.005236					//rotation threshold in radian = .3 degree
 	, DtDeg2Rad(35.699760)		//latitude
 	, DtDeg2Rad(-121.326577)	//longitude
 	, 0
