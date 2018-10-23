@@ -45,7 +45,7 @@ private:
 	CVED::ICvedDistri* m_pCved;
 
 	std::set<GlobalId> m_setAdosL;						//stores the IDs of local dynamic objects
-	CDynObj* m_pedestrian;
+	CExternalAvatarObj* m_pedestrian;
 };
 
 #include "ExternalControlImpl.cpp"

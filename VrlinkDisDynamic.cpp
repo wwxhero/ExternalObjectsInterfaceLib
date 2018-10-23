@@ -346,11 +346,13 @@ bool CVrlinkDisDynamic::ReceiveArt(GlobalId id_global, cvTObjState* s)
 		esr->useSmoother(s_disConf.smoothOn);
 		DtTopoView view(esr, s_disConf.latitude, s_disConf.longitude);
 		AvatarStateTran stateTran;
+		cvTObjState::AvatarState* s_a = (cvTObjState::AvatarState*)&s->avatarState;
 		stateTran.vel = view.velocity();
 		stateTran.acc = view.acceleration();
 		stateTran.rot = view.rotationalVelocity();
 		stateTran.loc = view.location();
 		stateTran.ori = view.orientation();
+		stateTran.child_first = s_a->child_first;
 
 		//traverse the joint angle tree: for reading the articulated structure joints
 		DtArticulatedPartCollection* artPartCol = esr->artPartList();
@@ -376,7 +378,7 @@ bool CVrlinkDisDynamic::ReceiveArt(GlobalId id_global, cvTObjState* s)
 			}
 		}
 
-		cvTObjState::AvatarState* s_a = (cvTObjState::AvatarState*)&s->avatarState;
+
 		Transform(stateTran, *s_a);
 	}
 	return received;
