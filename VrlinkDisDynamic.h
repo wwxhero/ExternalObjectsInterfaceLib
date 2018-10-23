@@ -17,16 +17,14 @@
 #include <set>
 #include "inetworkdynamic.h"
 #include "Clock.h"
-#include "CustomPdu.h"
 #include "LibExternalObjectIfNetwork.h"
-#include "objlayout.h"
+#include "PduExtObj.h"
 
 class DtExerciseConn;
 class DtEntityPublisher;
 class DtTopoView;
 class DtReflectedEntityList;
-union cvTObjState;
-struct cvTObjStateBuf;
+
 
 typedef struct JointId_tag
 {
@@ -78,11 +76,6 @@ protected:
 		DtTopoView* view;
 	} EntityPub;
 
-	typedef struct StateBuffer_tag
-	{
-		cvTObjStateBuf* sb;
-		bool updated;
-	} EntityState;
 
 	typedef struct CnnOut_tag
 	{
@@ -103,9 +96,9 @@ public:
 	virtual void NetworkInitialize(const std::list<IP>& sendTo, const std::list<IP>& receiveFrom, int port, IP self);
 	virtual void NetworkUninitialize();
 	virtual void PreDynaCalc();
-	virtual void Send(IP ip, GlobalId id_global, const cvTObjStateBuf& sb);
-	virtual void SendArt(IP ip, GlobalId id_global, const cvTObjState* s);
-	virtual bool Receive(GlobalId id_global, const cvTObjStateBuf*& sb);
+	virtual void Send(IP ip, GlobalId id_global, const cvTObjState* s);
+	virtual bool Receive(GlobalId id_global, cvTObjState* s);
+	virtual void SendArt(IP ip, GlobalId id_global, const cvTObjState* s); //fixme: move it to VrlinkDisPedCtrl
 	virtual bool ReceiveArt(GlobalId id_global, cvTObjState* s);
 	virtual void PostDynaCalc();
 protected:
@@ -144,8 +137,7 @@ protected:
 	}
 protected:
 	std::map<IP, CnnOut> m_cnnsOut;
-	std::map<GlobalId, EntityState> m_statesIn;
-
+	std::map<GlobalId, CPduExtObj::RawState> m_rsCached;
 	DtExerciseConn* m_cnnIn;
 	DtReflectedEntityList* m_entitiesIn;
 

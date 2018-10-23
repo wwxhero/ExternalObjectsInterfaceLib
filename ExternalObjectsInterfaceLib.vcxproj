@@ -176,7 +176,6 @@
     <ClCompile Include="PduCrtAdo.cpp" />
     <ClCompile Include="PduDelAdo.cpp" />
     <ClCompile Include="PduExtObj.cpp" />
-    <ClCompile Include="RealtimeNetworkDynamic.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

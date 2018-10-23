@@ -27,21 +27,29 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdate(TObjectPoolIdx id_loc
 		//assert(0);
 		return false;
 	}
+	cvTObjState::AnyObjState* s = &(curState->anyState);
+	const TVector3D boxOffset[2] = {
+			{
+				s->boundBox[0].x - s->position.x
+				, s->boundBox[0].y - s->position.y
+				, s->boundBox[0].z - s->position.z
+			}
+			,{
+				s->boundBox[1].x - s->position.x
+				, s->boundBox[1].y - s->position.y
+				, s->boundBox[1].z - s->position.z
+			}
+	};
 	GlobalId id_global = (*it).second;
-	const cvTObjStateBuf* sbAlt = NULL;
-	bool recieved = Receive(id_global, sbAlt);
+	bool recieved = Receive(id_global, curState);
 	if (recieved)
 	{
-		cvTObjState::ExternalDriverState* s_np = (cvTObjState::ExternalDriverState*)(&sbAlt->state.externalDriverState);
-		cvTObjState::ExternalDriverState* s_n  = (cvTObjState::ExternalDriverState*)(&curState->externalDriverState);
 		for (int i = 0; i < 2; i ++)
 		{
-			s_np->boundBox[i].x = s_n->boundBox[i].x - s_n->position.x + s_np->position.x;
-			s_np->boundBox[i].y = s_n->boundBox[i].y - s_n->position.y + s_np->position.y;
-			s_np->boundBox[i].z = s_n->boundBox[i].z - s_n->position.z + s_np->position.z;
+			s->boundBox[i].x = boxOffset[i].i + s->position.x;
+			s->boundBox[i].y = boxOffset[i].j + s->position.y;
+			s->boundBox[i].z = boxOffset[i].k + s->position.z;
 		}
-		memcpy(curInput, &sbAlt->contInp, sizeof(cvTObjContInp));
-		memcpy(curState, &sbAlt->state, sizeof(cvTObjState));
 	}
 	const TCHAR* recFlag[] = {
 		TEXT("NReceived")
@@ -50,7 +58,8 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdate(TObjectPoolIdx id_loc
 	const unsigned char* seg = (const unsigned char*)&id_global.owner;
 	int idx = recieved? 1: 0;
 	//curState->externalDriverState.visualState = 2;
-	const struct cvTObjState::ExternalDriverState& s = curState->externalDriverState;
+#ifdef _DEBUG
+	const struct cvTObjState::ExternalDriverState& es = curState->externalDriverState;
 	TRACE(TEXT("OnGetUpdate %s id:%d from ip:[%d.%d.%d.%d]")
 							TEXT(", \n\t position: [%E,%E,%E]")
 							TEXT(", \n\t tangent: [%E,%E,%E]")
@@ -65,19 +74,20 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdate(TObjectPoolIdx id_loc
 							TEXT(", \n\t Fidelity: [%d]")
 							TEXT(", \n\t angularVel: [%E, %E, %E]\n")
 										, recFlag[idx], id_local, seg[0], seg[1], seg[2], seg[3]
-										, s.position.x, s.position.y, s.position.z
-										, s.tangent.i, s.tangent.j, s.tangent.k
-										, s.lateral.i, s.lateral.j, s.lateral.k
-										, s.boundBox[0].x, s.boundBox[0].y, s.boundBox[0].z
-										, s.boundBox[1].x, s.boundBox[1].y, s.boundBox[1].z
-										, s.vel
-										, s.visualState, s.audioState
-										, s.acc
-										, s.suspStif, s.suspDamp, s.tireStif, s.tireDamp
-										, s.velBrake
-										, s.latAccel
-										, s.dynaFidelity
-										, s.angularVel.i, s.angularVel.j, s.angularVel.k);
+										, es.position.x, es.position.y, es.position.z
+										, es.tangent.i, es.tangent.j, es.tangent.k
+										, es.lateral.i, es.lateral.j, es.lateral.k
+										, es.boundBox[0].x, es.boundBox[0].y, es.boundBox[0].z
+										, es.boundBox[1].x, es.boundBox[1].y, es.boundBox[1].z
+										, es.vel
+										, es.visualState, es.audioState
+										, es.acc
+										, es.suspStif, es.suspDamp, es.tireStif, es.tireDamp
+										, es.velBrake
+										, es.latAccel
+										, es.dynaFidelity
+										, es.angularVel.i, es.angularVel.j, es.angularVel.k);
+#endif
 	return recieved;
 }
 
@@ -149,7 +159,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_
 	CExternalAvatarObj* pAvatar = static_cast<CExternalAvatarObj*>(pDynObj);
 	pAvatar->BFTAlloc(pAvatar->GetName(), &szNames, &numNames);
 	TVector3D* angles = new TVector3D[numNames];
-	pAvatar->BFTFillAnglesOut(angles, numNames);
+	CExternalAvatarObj::BFTGetJoints(curState, angles, numNames);
 	TRACE(TEXT(", \n\t joints:"));
 	for (int i_n = 0; i_n < numNames; i_n ++)
 	{
@@ -164,9 +174,6 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_
 template<class TNetworkImpl>
 void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdate(TObjectPoolIdx id_local, const cvTObjContInp* nextInput, const cvTObjState* nextState)
 {
-	cvTObjStateBuf sb;
-	sb.contInp = *nextInput;
-	sb.state = *nextState;
 
 	GlobalId id_global = {m_selfIp, id_local};
 	for (std::list<IP>::iterator it = m_multicastTo.begin(); it != m_multicastTo.end(); it ++)
@@ -175,7 +182,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdate(TObjectPoolIdx id_lo
 		unsigned char* ipv4 = (unsigned char*)&ipCluster;
 		TRACE(TEXT("Send to(IPV4):%d.%d.%d.%d\n")
 										, ipv4[0], ipv4[1], ipv4[2], ipv4[3]);
-		Send(ipCluster, id_global, sb);
+		Send(ipCluster, id_global, nextState);
 	}
 
 	const struct cvTObjState::ExternalDriverState& s = nextState->externalDriverState;
@@ -256,7 +263,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdateArt(TObjectPoolIdx id
 	unsigned int numNames = 0;
 	pAvatar->BFTAlloc(pAvatar->GetName(), &szNames, &numNames);
 	TVector3D* angles = new TVector3D[numNames];
-	pAvatar->BFTFillAnglesOut(angles, numNames);
+	CExternalAvatarObj::BFTGetJoints(nextState, angles, numNames);
 	TRACE(TEXT(", \n\t joints:"));
 	for (int i_n = 0; i_n < numNames; i_n ++)
 	{

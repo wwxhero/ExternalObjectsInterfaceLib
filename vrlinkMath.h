@@ -322,12 +322,39 @@ inline void Transform(const ExternalDriverStateTran& src, cvTObjState::VehicleSt
 
 inline void Transform(const cvTObjState::AvatarState& src, AvatarStateTran& dst)
 {
+	dst.loc.setX(src.position.x);
+	dst.loc.setY(src.position.y);
+	dst.loc.setZ(src.position.z);
 
+	Frame2TaitBryan(c_t0, c_l0, src.tangent, src.lateral, dst.ori);
+	dst.child_first = src.child_first;
 }
 
 inline void Transform(const AvatarStateTran& src, cvTObjState::AvatarState& dst)
 {
+	memset(&dst, 0, sizeof(cvTObjState::AvatarState)); //fixme: a set of vehicle attributes are ignored and being set 0
+	dst.position.x = src.loc.x();
+	dst.position.y = src.loc.y();
+	dst.position.z = src.loc.z();
 
+	DtVector32 v = src.vel;
+	dst.vel = sqrt(v.magnitudeSquared());
+
+	TaitBryan2Frame(src.ori, c_t0, c_l0, dst.tangent, dst.lateral);
+
+	DtVector32 a = src.acc;
+	DtVector32 t = v;
+	DtVector32 l(dst.lateral.i, dst.lateral.j, dst.lateral.k);
+
+	dst.acc = a.dotProduct(t);
+	double al = a.dotProduct(l);
+	dst.latAccel = al;
+
+
+	TVector3D angularVel;
+	AVVrlink2SimRad(src.rot, angularVel, dst.tangent, dst.lateral);
+
+	dst.child_first = src.child_first;
 }
 
 #endif

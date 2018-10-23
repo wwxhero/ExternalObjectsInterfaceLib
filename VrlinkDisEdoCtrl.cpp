@@ -23,10 +23,6 @@ void CVrlinkDisEdoCtrl::OnRequest4CreateAdo( CCustomPdu* pdu, void* p )
 	pduCrtAdo->getTuple(id_global, cName, attri, pt, t, l);
 	pThis->CreateAdoStub(id_global, cName, attri, &pt, &t, &l);
 
-	EntityState& buf = pThis->m_statesIn[id_global];
-	buf.updated = false;
-	buf.sb = new cvTObjStateBuf;
-	memset(buf.sb, 0, sizeof(cvTObjStateBuf));
 }
 void CVrlinkDisEdoCtrl::OnRequest4DeleteAdo( CCustomPdu* pdu, void* p )
 {
@@ -34,15 +30,6 @@ void CVrlinkDisEdoCtrl::OnRequest4DeleteAdo( CCustomPdu* pdu, void* p )
 	CVrlinkDisEdoCtrl* pThis = reinterpret_cast<CVrlinkDisEdoCtrl*>(p);
 	GlobalId id_global = pduDelAdo->globalId();
 	pThis->DeleteAdoStub(id_global);
-
-	std::map<GlobalId, EntityState>::iterator it = pThis->m_statesIn.find(id_global);
-	//ASSERT(it != pThis->m_statesIn.end());
-	if (it != pThis->m_statesIn.end())
-	{
-		EntityState& buf = it->second;
-		delete buf.sb;
-		pThis->m_statesIn.erase(it);
-	}
 }
 
 CVrlinkDisEdoCtrl::CVrlinkDisEdoCtrl(void) : CVrlinkDisDynamic(edo_controller)
