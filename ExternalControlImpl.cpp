@@ -131,12 +131,8 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_
 							TEXT(", \n\t lateral: [%E,%E,%E]")
 							TEXT(", \n\t bbox: [%E,%E,%E], [%E,%E,%E]")
 							TEXT(", \n\t vel: [%E]")
-							TEXT(", \n\t visualState: [%d] audioState: [%d]")
 							TEXT(", \n\t acc: [%E]")
-							TEXT(", \n\t sus4: [%E, %E, %E, %E]")
-							TEXT(", \n\t velBrake: [%E]")
 							TEXT(", \n\t latAccel: [%E]")
-							TEXT(", \n\t Fidelity: [%d]")
 							TEXT(", \n\t angularVel: [%E, %E, %E]\n")
 										, recFlag[idx], id_local, seg[0], seg[1], seg[2], seg[3]
 										, s.position.x, s.position.y, s.position.z
@@ -145,12 +141,8 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_
 										, s.boundBox[0].x, s.boundBox[0].y, s.boundBox[0].z
 										, s.boundBox[1].x, s.boundBox[1].y, s.boundBox[1].z
 										, s.vel
-										, s.visualState, s.audioState
 										, s.acc
-										, s.suspStif, s.suspDamp, s.tireStif, s.tireDamp
-										, s.velBrake
 										, s.latAccel
-										, s.dynaFidelity
 										, s.angularVel.i, s.angularVel.j, s.angularVel.k);
 	const char** szNames = NULL;
 	unsigned int numNames = 0;
@@ -236,10 +228,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdateArt(TObjectPoolIdx id
 							TEXT(", \n\t vel: [%E]")
 							TEXT(", \n\t visualState: [%d] audioState: [%d]")
 							TEXT(", \n\t acc: [%E]")
-							TEXT(", \n\t sus4: [%E, %E, %E, %E]")
-							TEXT(", \n\t velBrake: [%E]")
 							TEXT(", \n\t latAccel: [%E]")
-							TEXT(", \n\t Fidelity: [%d]")
 							TEXT(", \n\t angularVel: [%E, %E, %E]")
 										, id_local
 										, s.position.x, s.position.y, s.position.z
@@ -250,10 +239,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdateArt(TObjectPoolIdx id
 										, s.vel
 										, s.visualState, s.audioState
 										, s.acc
-										, s.suspStif, s.suspDamp, s.tireStif, s.tireDamp
-										, s.velBrake
 										, s.latAccel
-										, s.dynaFidelity
 										, s.angularVel.i, s.angularVel.j, s.angularVel.k);
 	CDynObj* pDynObj = m_mapGid2ObjR[id_global];
 	ASSERT(cvEObjType::eCV_EXTERNAL_AVATAR == pDynObj->GetType());
