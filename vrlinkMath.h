@@ -332,7 +332,7 @@ inline void Transform(const cvTObjState::AvatarState& src, AvatarStateTran& dst)
 
 inline void Transform(const AvatarStateTran& src, cvTObjState::AvatarState& dst)
 {
-	memset(&dst, 0, sizeof(cvTObjState::AvatarState)); //fixme: a set of vehicle attributes are ignored and being set 0
+	memset(&dst, 0, sizeof(cvTObjState::AvatarState));
 	dst.position.x = src.loc.x();
 	dst.position.y = src.loc.y();
 	dst.position.z = src.loc.z();

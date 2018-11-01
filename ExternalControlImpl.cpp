@@ -156,18 +156,28 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_
 	const char** szNames = NULL;
 	unsigned int numNames = 0;
 	CDynObj* pDynObj = m_mapGid2ObjR[id_global];
-	ASSERT(cvEObjType::eCV_EXTERNAL_AVATAR == pDynObj->GetType());
-	CExternalAvatarObj* pAvatar = static_cast<CExternalAvatarObj*>(pDynObj);
-	pAvatar->BFTAlloc(pAvatar->GetName(), &szNames, &numNames);
+	CArtiJoints* pJoints = NULL;
+	if (0 == id_local)
+	{
+		ASSERT(cvEObjType::eCV_EXTERNAL_AVATAR == pDynObj->GetType());
+		pJoints = static_cast<CExternalAvatarObj*>(pDynObj);
+	}
+	else
+	{
+		ASSERT(cvEObjType::eCV_AVATAR == pDynObj->GetType());
+		pJoints = static_cast<CAvatarObj*>(pDynObj);
+	}
+
+	pJoints->BFTAlloc(pDynObj->GetName(), &szNames, &numNames);
 	TVector3D* angles = new TVector3D[numNames];
-	CExternalAvatarObj::BFTGetJoints(curState, angles, numNames);
+	CArtiJoints::BFTGetJoints(curState, angles, numNames);
 	TRACE(TEXT(", \n\t joints:"));
 	for (int i_n = 0; i_n < numNames; i_n ++)
 	{
 		TRACE(TEXT(", \n\t\t%d:[%s]=<%E, %E, %E>"), i_n, szNames[i_n], angles[i_n].i, angles[i_n].j, angles[i_n].k);
 	}
 	delete [] angles;
-	pAvatar->BFTFree(szNames, numNames);
+	pJoints->BFTFree(szNames, numNames);
 #endif
 	return recieved;
 }
@@ -256,7 +266,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdateArt(TObjectPoolIdx id
 	unsigned int numNames = 0;
 	pAvatar->BFTAlloc(pAvatar->GetName(), &szNames, &numNames);
 	TVector3D* angles = new TVector3D[numNames];
-	CExternalAvatarObj::BFTGetJoints(nextState, angles, numNames);
+	CArtiJoints::BFTGetJoints(nextState, angles, numNames);
 	TRACE(TEXT(", \n\t joints:"));
 	for (int i_n = 0; i_n < numNames; i_n ++)
 	{
@@ -334,7 +344,6 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 		}
 		else if (ownPedBlk) //runs for hank simulator
 		{
-			//fixme: pedestrain object is considered as a vehicle
 			m_pedestrian = static_cast<CExternalAvatarObj*>(pCvedDistri->LocalCreatePDO(hBlk, true));
 			CPoint3D pos = m_pedestrian->GetPos();
 			CVector3D tan = m_pedestrian->GetTan();
