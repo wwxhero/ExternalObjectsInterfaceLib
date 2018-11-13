@@ -157,19 +157,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_
 	const char** szNames = NULL;
 	unsigned int numNames = 0;
 	CDynObj* pDynObj = m_mapGid2ObjR[id_global];
-	CArtiJoints* pJoints = NULL;
-	if (0 == id_local)
-	{
-		ASSERT(cvEObjType::eCV_EXTERNAL_AVATAR == pDynObj->GetType());
-		pJoints = static_cast<CExternalAvatarObj*>(pDynObj);
-	}
-	else
-	{
-		ASSERT(cvEObjType::eCV_AVATAR == pDynObj->GetType());
-		pJoints = static_cast<CAvatarObj*>(pDynObj);
-	}
-
-	pJoints->BFTAlloc(pDynObj->GetName(), &szNames, &numNames);
+	CArtiJoints::BFTAlloc(pDynObj->GetName(), &szNames, &numNames);
 	TVector3D* angles = new TVector3D[numNames];
 	CArtiJoints::BFTGetJoints(curState, angles, numNames);
 	TRACE(TEXT(", \n\t joints:"));
@@ -178,7 +166,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_
 		TRACE(TEXT(", \n\t\t%d:[%s]=<%d, %d, %d>"), i_n, szNames[i_n], (int)rad2deg(angles[i_n].i), (int)rad2deg(angles[i_n].j), (int)rad2deg(angles[i_n].k));
 	}
 	delete [] angles;
-	pJoints->BFTFree(szNames, numNames);
+	CArtiJoints::BFTFree(szNames, numNames);
 #endif
 	return recieved;
 }
@@ -265,7 +253,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdateArt(TObjectPoolIdx id
 
 	const char** szNames = NULL;
 	unsigned int numNames = 0;
-	pAvatar->BFTAlloc(pAvatar->GetName(), &szNames, &numNames);
+	CArtiJoints::BFTAlloc(pAvatar->GetName(), &szNames, &numNames);
 	TVector3D* angles = new TVector3D[numNames];
 	CArtiJoints::BFTGetJoints(nextState, angles, numNames);
 	TRACE(TEXT(", \n\t joints:"));
@@ -275,7 +263,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdateArt(TObjectPoolIdx id
 	}
 	TRACE(TEXT("\n"));
 	delete [] angles;
-	pAvatar->BFTFree(szNames, numNames);
+	CArtiJoints::BFTFree(szNames, numNames);
 #endif
 }
 
