@@ -4,6 +4,7 @@
 #include "roadpos.h"
 #include "utility.h"
 #include "cveddistri.h"
+#include "vrlinkMath.h"
 
 template<class TNetworkImpl>
 CExternalObjectControlImpl<TNetworkImpl>::CExternalObjectControlImpl()
@@ -174,7 +175,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_
 	TRACE(TEXT(", \n\t joints:"));
 	for (int i_n = 0; i_n < numNames; i_n ++)
 	{
-		TRACE(TEXT(", \n\t\t%d:[%s]=<%E, %E, %E>"), i_n, szNames[i_n], angles[i_n].i, angles[i_n].j, angles[i_n].k);
+		TRACE(TEXT(", \n\t\t%d:[%s]=<%d, %d, %d>"), i_n, szNames[i_n], (int)rad2deg(angles[i_n].i), (int)rad2deg(angles[i_n].j), (int)rad2deg(angles[i_n].k));
 	}
 	delete [] angles;
 	pJoints->BFTFree(szNames, numNames);
@@ -270,7 +271,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdateArt(TObjectPoolIdx id
 	TRACE(TEXT(", \n\t joints:"));
 	for (int i_n = 0; i_n < numNames; i_n ++)
 	{
-		TRACE(TEXT(", \n\t\t%d:[%s]=<%E, %E, %E>"), i_n, szNames[i_n], angles[i_n].i, angles[i_n].j, angles[i_n].k);
+		TRACE(TEXT(", \n\t\t%d:[%s]=<%d, %d, %d>"), i_n, szNames[i_n], (int)rad2deg(angles[i_n].i), (int)rad2deg(angles[i_n].j), (int)rad2deg(angles[i_n].k));
 	}
 	TRACE(TEXT("\n"));
 	delete [] angles;
