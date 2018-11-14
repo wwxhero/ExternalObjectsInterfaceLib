@@ -262,8 +262,21 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdateArt(TObjectPoolIdx id
 		TRACE(TEXT(", \n\t\t%d:[%s]=<%d, %d, %d>"), i_n, szNames[i_n], (int)rad2deg(angles[i_n].i), (int)rad2deg(angles[i_n].j), (int)rad2deg(angles[i_n].k));
 	}
 	TRACE(TEXT("\n"));
-	delete [] angles;
 	CArtiJoints::BFTFree(szNames, numNames);
+
+	szNames = (const char**)malloc(numNames*sizeof(const char*));
+	int nDiguyJoints = pAvatar->BFTGetJointsDiGuy(szNames, angles, numNames);
+	TRACE(TEXT(", \n\t DIGUY joints:"));
+	for (int i_n = 0; i_n < nDiguyJoints; i_n ++)
+	{
+		if (NULL == szNames[i_n])
+			TRACE(TEXT(", \n\t\t%d:[NULL]=<%d, %d, %d>"), i_n,  (int)rad2deg(angles[i_n].i), (int)rad2deg(angles[i_n].j), (int)rad2deg(angles[i_n].k));
+		else
+			TRACE(TEXT(", \n\t\t%d:[%s]=<%d, %d, %d>"), i_n, szNames[i_n], (int)rad2deg(angles[i_n].i), (int)rad2deg(angles[i_n].j), (int)rad2deg(angles[i_n].k));
+	}
+	TRACE(TEXT("\n"));
+	free(szNames);
+	delete [] angles;
 #endif
 }
 
