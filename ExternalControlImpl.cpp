@@ -266,13 +266,13 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdateArt(TObjectPoolIdx id
 
 	szNames = (const char**)malloc(numNames*sizeof(const char*));
 	int nDiguyJoints = pAvatar->BFTGetJointsDiGuy(szNames, angles, numNames);
-	TRACE(TEXT(", \n\t DIGUY joints:"));
+	TRACE(TEXT(", \n\t DIGUY joints in z x y order:"));
 	for (int i_n = 0; i_n < nDiguyJoints; i_n ++)
 	{
 		if (NULL == szNames[i_n])
-			TRACE(TEXT(", \n\t\t%d:[NULL]=<%d, %d, %d>"), i_n,  (int)rad2deg(angles[i_n].i), (int)rad2deg(angles[i_n].j), (int)rad2deg(angles[i_n].k));
+			TRACE(TEXT(" \n\t\t%2d:NULL\t=\t%4d\t%4d\t%4d"), i_n,  (int)rad2deg(angles[i_n].k), (int)rad2deg(angles[i_n].i), (int)rad2deg(angles[i_n].j));
 		else
-			TRACE(TEXT(", \n\t\t%d:[%s]=<%d, %d, %d>"), i_n, szNames[i_n], (int)rad2deg(angles[i_n].i), (int)rad2deg(angles[i_n].j), (int)rad2deg(angles[i_n].k));
+			TRACE(TEXT(" \n\t\t%2d:%20s\t=\t%4d\t%4d\t%4d"), i_n, szNames[i_n], (int)rad2deg(angles[i_n].k), (int)rad2deg(angles[i_n].i), (int)rad2deg(angles[i_n].j));
 	}
 	TRACE(TEXT("\n"));
 	free(szNames);
