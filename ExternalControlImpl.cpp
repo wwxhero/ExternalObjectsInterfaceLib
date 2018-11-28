@@ -5,6 +5,7 @@
 #include "utility.h"
 #include "cveddistri.h"
 #include "vrlinkMath.h"
+#include "EulerAngles.h"
 
 template<class TNetworkImpl>
 CExternalObjectControlImpl<TNetworkImpl>::CExternalObjectControlImpl()
@@ -264,18 +265,30 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdateArt(TObjectPoolIdx id
 	TRACE(TEXT("\n"));
 	CArtiJoints::BFTFree(szNames, numNames);
 
-	szNames = (const char**)malloc(numNames*sizeof(const char*));
-	int nDiguyJoints = pAvatar->BFTGetJointsDiGuy(szNames, angles, numNames);
-	TRACE(TEXT(", \n\t DIGUY joints in z x y order:"));
-	for (int i_n = 0; i_n < nDiguyJoints; i_n ++)
-	{
-		if (NULL == szNames[i_n])
-			TRACE(TEXT(" \n\t\t%2d:NULL\t=\t%4d\t%4d\t%4d"), i_n,  (int)rad2deg(angles[i_n].k), (int)rad2deg(angles[i_n].i), (int)rad2deg(angles[i_n].j));
-		else
-			TRACE(TEXT(" \n\t\t%2d:%20s\t=\t%4d\t%4d\t%4d"), i_n, szNames[i_n], (int)rad2deg(angles[i_n].k), (int)rad2deg(angles[i_n].i), (int)rad2deg(angles[i_n].j));
-	}
-	TRACE(TEXT("\n"));
-	free(szNames);
+	// szNames = (const char**)malloc(numNames*sizeof(const char*));
+	// int nDiguyJoints = pAvatar->BFTGetJointsDiGuy(szNames, angles, numNames);
+	// TRACE(TEXT(", \n\t DIGUY joints in z x y order:"));
+	// for (int i_n = 0; i_n < nDiguyJoints; i_n ++)
+	// {
+	// 	float a_zyxr_f[] = {angles[i_n].k, angles[i_n].j, angles[i_n].i};
+	// 	EulerAngles a_zyxr = {a_zyxr_f[0], a_zyxr_f[1], a_zyxr_f[2], EulOrdZYXr} ;
+	// 	HMatrix R;
+	// 	Eul_ToHMatrix(a_zyxr, R);
+	// 	EulerAngles a_zxys = Eul_FromHMatrix(R, EulOrdZXYs);
+	// 	EulerAngles a_zxyr = Eul_FromHMatrix(R, EulOrdZXYr);
+	// 	float a_zxys_f[] = {a_zxys.x, a_zxys.y, a_zxys.z};
+	// 	float a_zxyr_f[] = {a_zxyr.x, a_zxyr.y, a_zxyr.z};
+	// 	if (NULL == szNames[i_n])
+	// 		TRACE(TEXT(" \n\t\t%2d:NULL\t=\t%4d\t%4d\t%4d\t%4d\t%4d\t%4d"), i_n
+	// 			,  (int)rad2deg(a_zxys_f[0]), (int)rad2deg(a_zxys_f[1]), (int)rad2deg(a_zxys_f[2])
+	// 			,  (int)rad2deg(a_zxyr_f[0]), (int)rad2deg(a_zxyr_f[1]), (int)rad2deg(a_zxyr_f[2]));
+	// 	else
+	// 		TRACE(TEXT(" \n\t\t%2d:%20s\t=\t%4d\t%4d\t%4d\t%4d\t%4d\t%4d"), i_n, szNames[i_n]
+	// 			,  (int)rad2deg(a_zxys_f[0]), (int)rad2deg(a_zxys_f[1]), (int)rad2deg(a_zxys_f[2])
+	// 			,  (int)rad2deg(a_zxyr_f[0]), (int)rad2deg(a_zxyr_f[1]), (int)rad2deg(a_zxyr_f[2]));
+	// }
+	// TRACE(TEXT("\n"));
+	// free(szNames);
 	delete [] angles;
 #endif
 }
