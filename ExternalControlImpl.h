@@ -16,7 +16,9 @@ public:
 	virtual void PreUpdateDynamicModels();
 	virtual void PostUpdateDynamicModels();
 	virtual bool OnGetUpdate(TObjectPoolIdx id_local, cvTObjContInp* curInput, cvTObjState* curState);
+	virtual bool OnGetUpdateArt(TObjectPoolIdx idx_local, cvTObjState* curState);
 	virtual void OnPushUpdate(TObjectPoolIdx id_local, const cvTObjContInp* nextInput, const cvTObjState* nextState);
+	virtual void OnPushUpdateArt(TObjectPoolIdx idx_local, const cvTObjState* curState);
 	virtual void OnCreateADO(TObjectPoolIdx id_local
 							, const char* szName
 							, const cvTObjAttr& cAttr
@@ -36,14 +38,14 @@ private:
 	virtual void DeleteAdoStub(GlobalId id_global);
 private:
 	std::map<TObjectPoolIdx, GlobalId> m_mapLid2GidR;	//stores all the IDs of remote dynamic objects
-	std::map<GlobalId, CDynObj*> m_mapGid2ObjR; 		//stores remote ADO stubs
+	std::map<GlobalId, CDynObj*> m_mapGid2ObjR; 		//stores remote dynamic objects
 
 	std::list<IP> m_multicastTo;
 	IP m_selfIp;
 	CVED::ICvedDistri* m_pCved;
 
 	std::set<GlobalId> m_setAdosL;						//stores the IDs of local dynamic objects
-	CDynObj* m_pedestrian;
+	CExternalAvatarObj* m_pedestrian;
 };
 
 #include "ExternalControlImpl.cpp"

@@ -24,9 +24,21 @@ class DtExerciseConn;
 class DtEntityPublisher;
 class DtTopoView;
 class DtReflectedEntityList;
-union cvTObjState;
-struct cvTObjStateBuf;
 
+
+typedef struct JointId_tag
+{
+	IP owner;
+	TObjectPoolIdx objId;
+	int partType;			//DtArtPartType
+} JointId;
+
+inline bool operator < (JointId id1, JointId id2)
+{
+	return id1.owner < id2.owner
+		|| (id1.owner == id2.owner && id1.objId < id2.objId)
+		|| (id1.owner == id2.owner && id1.objId == id2.objId && id1.partType < id2.partType);
+}
 
 class CVrlinkDisDynamic :
 	public INetworkDynamic
@@ -78,7 +90,6 @@ protected:
 		DtTopoView* view;
 	} EntityPublisher;
 
-
 public:
 	CVrlinkDisDynamic(TERMINAL type);
 	virtual ~CVrlinkDisDynamic(void);
@@ -87,6 +98,8 @@ public:
 	virtual void PreDynaCalc();
 	virtual void Send(IP ip, GlobalId id_global, const cvTObjState* s);
 	virtual bool Receive(GlobalId id_global, cvTObjState* s);
+	virtual void SendArt(IP ip, GlobalId id_global, const cvTObjState* s); //fixme: move it to VrlinkDisPedCtrl
+	virtual bool ReceiveArt(GlobalId id_global, cvTObjState* s);
 	virtual void PostDynaCalc();
 protected:
 	inline bool getEntityPub(IP ip, GlobalId id_global, EntityPublisher& pub)

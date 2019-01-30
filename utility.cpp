@@ -2,6 +2,7 @@
 #include "utility.h"
 #include <Windows.h>
 #include <malloc.h>
+#include <stdio.h>
 void __cdecl Logoutf(const TCHAR* format, ...)
 {
 #ifdef _DEBUG
