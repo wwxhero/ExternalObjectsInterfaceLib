@@ -38,14 +38,14 @@ private:
 	virtual void DeleteAdoStub(GlobalId id_global);
 private:
 	std::map<TObjectPoolIdx, GlobalId> m_mapLid2GidR;	//stores all the IDs of remote dynamic objects
-	std::map<GlobalId, CDynObj*> m_mapGid2ObjR; 		//stores remote dynamic objects
+	std::map<GlobalId, CVED::CDynObj*> m_mapGid2ObjR; 		//stores remote dynamic objects
 
 	std::list<IP> m_multicastTo;
 	IP m_selfIp;
 	CVED::ICvedDistri* m_pCved;
 
 	std::set<GlobalId> m_setAdosL;						//stores the IDs of local dynamic objects
-	CExternalAvatarObj* m_pedestrian;
+	CVED::CExternalAvatarObj* m_pedestrian;
 };
 
 #include "ExternalControlImpl.cpp"

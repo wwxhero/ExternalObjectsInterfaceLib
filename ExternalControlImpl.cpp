@@ -6,6 +6,7 @@
 #include "cveddistri.h"
 #include "vrlinkMath.h"
 #include "EulerAngles.h"
+using namespace CVED;
 template<class TNetworkImpl>
 CExternalObjectControlImpl<TNetworkImpl>::CExternalObjectControlImpl()
 	: m_pCved(NULL)
