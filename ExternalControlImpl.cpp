@@ -160,12 +160,16 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_
 	CDynObj* pDynObj = m_mapGid2ObjR[id_global];
 	CArtiJoints::BFTAlloc(pDynObj->GetName(), &szNames, &numNames);
 	TVector3D* angles = new TVector3D[numNames];
-	CArtiJoints::BFTGetJoints(curState, angles, numNames);
+	TVector3D* offsets = new TVector3D[numNames];
+	CArtiJoints::BFTGetJoints(curState, angles, offsets, numNames);
 	TRACE(TEXT(", \n\t joints:"));
 	for (int i_n = 0; i_n < numNames; i_n ++)
 	{
-		TRACE(TEXT(", \n\t\t%d:[%s]=<%d, %d, %d>"), i_n, szNames[i_n], (int)rad2deg(angles[i_n].i), (int)rad2deg(angles[i_n].j), (int)rad2deg(angles[i_n].k));
+		TRACE(TEXT(", \n\t\t%d:[%s]=<%d, %d, %d>, <%6.4f, %6.4f, %6.4f>")
+			, i_n, szNames[i_n], (int)rad2deg(angles[i_n].i), (int)rad2deg(angles[i_n].j), (int)rad2deg(angles[i_n].k)
+			, offsets[i_n].i, offsets[i_n].j, offsets[i_n].k);
 	}
+	delete [] offsets;
 	delete [] angles;
 	CArtiJoints::BFTFree(szNames, numNames);
 #endif
@@ -256,40 +260,20 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdateArt(TObjectPoolIdx id
 	unsigned int numNames = 0;
 	CArtiJoints::BFTAlloc(pAvatar->GetName(), &szNames, &numNames);
 	TVector3D* angles = new TVector3D[numNames];
-	CArtiJoints::BFTGetJoints(nextState, angles, numNames);
+	TVector3D* offsets = new TVector3D[numNames];
+	CArtiJoints::BFTGetJoints(nextState, angles, offsets, numNames);
 	TRACE(TEXT(", \n\t joints:"));
 	for (int i_n = 0; i_n < numNames; i_n ++)
 	{
-		TRACE(TEXT(", \n\t\t%d:[%s]=<%d, %d, %d>"), i_n, szNames[i_n], (int)rad2deg(angles[i_n].i), (int)rad2deg(angles[i_n].j), (int)rad2deg(angles[i_n].k));
+		TRACE(TEXT(", \n\t\t%d:[%s]=<%d, %d, %d>, <%6.4f, %6.4f, %6.4f>")
+					, i_n, szNames[i_n], (int)rad2deg(angles[i_n].i), (int)rad2deg(angles[i_n].j), (int)rad2deg(angles[i_n].k)
+					, offsets[i_n].i, offsets[i_n].j, offsets[i_n].k);
 	}
 	TRACE(TEXT("\n"));
 	CArtiJoints::BFTFree(szNames, numNames);
 
-	// szNames = (const char**)malloc(numNames*sizeof(const char*));
-	// int nDiguyJoints = pAvatar->BFTGetJointsDiGuy(szNames, angles, numNames);
-	// TRACE(TEXT(", \n\t DIGUY joints in z x y order:"));
-	// for (int i_n = 0; i_n < nDiguyJoints; i_n ++)
-	// {
-	// 	float a_zyxr_f[] = {angles[i_n].k, angles[i_n].j, angles[i_n].i};
-	// 	EulerAngles a_zyxr = {a_zyxr_f[0], a_zyxr_f[1], a_zyxr_f[2], EulOrdZYXr} ;
-	// 	HMatrix R;
-	// 	Eul_ToHMatrix(a_zyxr, R);
-	// 	EulerAngles a_zxys = Eul_FromHMatrix(R, EulOrdZXYs);
-	// 	EulerAngles a_zxyr = Eul_FromHMatrix(R, EulOrdZXYr);
-	// 	float a_zxys_f[] = {a_zxys.x, a_zxys.y, a_zxys.z};
-	// 	float a_zxyr_f[] = {a_zxyr.x, a_zxyr.y, a_zxyr.z};
-	// 	if (NULL == szNames[i_n])
-	// 		TRACE(TEXT(" \n\t\t%2d:NULL\t=\t%4d\t%4d\t%4d\t%4d\t%4d\t%4d"), i_n
-	// 			,  (int)rad2deg(a_zxys_f[0]), (int)rad2deg(a_zxys_f[1]), (int)rad2deg(a_zxys_f[2])
-	// 			,  (int)rad2deg(a_zxyr_f[0]), (int)rad2deg(a_zxyr_f[1]), (int)rad2deg(a_zxyr_f[2]));
-	// 	else
-	// 		TRACE(TEXT(" \n\t\t%2d:%20s\t=\t%4d\t%4d\t%4d\t%4d\t%4d\t%4d"), i_n, szNames[i_n]
-	// 			,  (int)rad2deg(a_zxys_f[0]), (int)rad2deg(a_zxys_f[1]), (int)rad2deg(a_zxys_f[2])
-	// 			,  (int)rad2deg(a_zxyr_f[0]), (int)rad2deg(a_zxyr_f[1]), (int)rad2deg(a_zxyr_f[2]));
-	// }
-	// TRACE(TEXT("\n"));
-	// free(szNames);
 	delete [] angles;
+	delete [] offsets;
 #endif
 }
 

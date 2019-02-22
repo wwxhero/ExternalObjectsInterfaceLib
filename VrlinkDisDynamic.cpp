@@ -207,12 +207,17 @@ void CVrlinkDisDynamic::SendArt(IP ip, GlobalId id_global, const cvTObjState* s)
 	//traverse the joint angle tree: for sending the articulated structure joints
 	DtEntityStateRepository* entity = epb.pub->esr();
 	DtArticulatedPartCollection* artPartCol = entity->artPartList();
+#ifdef _DEBUG
+	unsigned int n_params = artPartCol->totalParameterCount();
+	unsigned int n_parts = artPartCol->partCount();
+#endif
 	TAvatarJoint root = VIRTUAL_ROOT(stateTran.child_first);
 	std::queue<TAvatarJoint*> bft_queue;
 	bft_queue.push(&root);
 	while (!bft_queue.empty())
 	{
 		TAvatarJoint* j_p = bft_queue.front();
+		DtArticulatedPart& art_p = artPartCol->getPart(j_p->type);
 		bft_queue.pop();
 		TAvatarJoint* j_c = j_p->child_first;
 		while (NULL != j_c)
@@ -220,14 +225,26 @@ void CVrlinkDisDynamic::SendArt(IP ip, GlobalId id_global, const cvTObjState* s)
 			bft_queue.push(j_c);
 			DtArticulatedPart& art_c = artPartCol->getPart(j_c->type);
 			art_c.setParameter(DtApAzimuth, j_c->angle.k);
-			art_c.setParameter(DtApAzimuthRate, j_c->angleRate.k);
+			//art_c.setParameter(DtApAzimuthRate, j_c->angleRate.k);
 			art_c.setParameter(DtApElevation, j_c->angle.j);
-			art_c.setParameter(DtApElevationRate, j_c->angleRate.j);
+			//art_c.setParameter(DtApElevationRate, j_c->angleRate.j);
 			art_c.setParameter(DtApRotation, j_c->angle.i);
-			art_c.setParameter(DtApRotationRate, j_c->angleRate.i);
+			//art_c.setParameter(DtApRotationRate, j_c->angleRate.i);
+			art_c.setParameter(DtApX, j_c->offset.i);
+			//art_c.setParameter(DtApXRate, j_c->offsetRate.i);
+			art_c.setParameter(DtApY, j_c->offset.j);
+			//art_c.setParameter(DtApYRate, j_c->offsetRate.j);
+			art_c.setParameter(DtApZ, j_c->offset.k);
+			//art_c.setParameter(DtApZRate, j_c->offsetRate.k);
 			j_c = j_c->sibling_next;
+			artPartCol->attachPart(&art_c, &art_p);
 		}
 	}
+#ifdef _DEBUG
+	unsigned int n_params_prime = artPartCol->totalParameterCount();
+	unsigned int n_parts_prime = artPartCol->partCount();
+	TRACE(TEXT("\narticulated params:%d=>%d parts:%d=>%d\n"), n_params, n_params_prime, n_parts, n_parts_prime);
+#endif
 
 	//CPduExtObj pduObj(id_global, sb.state.externalDriverState);
 	//epb.cnn->sendStamped(pduObj);
@@ -369,11 +386,17 @@ bool CVrlinkDisDynamic::ReceiveArt(GlobalId id_global, cvTObjState* s)
 				bft_queue.push(j_c);
 				DtArticulatedPart& art_c = artPartCol->getPart(j_c->type);
 				j_c->angle.k = art_c.getParameterValue(DtApAzimuth);
-				j_c->angleRate.k = art_c.getParameterValue(DtApAzimuthRate);
+				//j_c->angleRate.k = art_c.getParameterValue(DtApAzimuthRate);
 				j_c->angle.j = art_c.getParameterValue(DtApElevation);
-				j_c->angleRate.j = art_c.getParameterValue(DtApElevationRate);
+				//j_c->angleRate.j = art_c.getParameterValue(DtApElevationRate);
 				j_c->angle.i = art_c.getParameterValue(DtApRotation);
-				j_c->angleRate.i = art_c.getParameterValue(DtApRotationRate);
+				//j_c->angleRate.i = art_c.getParameterValue(DtApRotationRate);
+				j_c->offset.i = art_c.getParameterValue(DtApX);
+				//j_c->offsetRate.i = art_c.getParameterValue(DtApXRate);
+				j_c->offset.j = art_c.getParameterValue(DtApY);
+				//j_c->offsetRate.j = art_c.getParameterValue(DtApYRate);
+				j_c->offset.k = art_c.getParameterValue(DtApZ);
+				//j_c->offsetRate.k = art_c.getParameterValue(DtApZRate);
 				j_c = j_c->sibling_next;
 			}
 		}
