@@ -225,17 +225,17 @@ void CVrlinkDisDynamic::SendArt(IP ip, GlobalId id_global, const cvTObjState* s)
 			bft_queue.push(j_c);
 			DtArticulatedPart& art_c = artPartCol->getPart(j_c->type);
 			art_c.setParameter(DtApAzimuth, j_c->angle.k);
-			//art_c.setParameter(DtApAzimuthRate, j_c->angleRate.k);
+			//art_c.setParameter(DtApAzimuthRate, 0);
 			art_c.setParameter(DtApElevation, j_c->angle.j);
-			//art_c.setParameter(DtApElevationRate, j_c->angleRate.j);
+			//art_c.setParameter(DtApElevationRate, 0);
 			art_c.setParameter(DtApRotation, j_c->angle.i);
-			//art_c.setParameter(DtApRotationRate, j_c->angleRate.i);
+			//art_c.setParameter(DtApRotationRate, 0);
 			art_c.setParameter(DtApX, j_c->offset.i);
-			//art_c.setParameter(DtApXRate, j_c->offsetRate.i);
+			//art_c.setParameter(DtApXRate, 0);
 			art_c.setParameter(DtApY, j_c->offset.j);
-			//art_c.setParameter(DtApYRate, j_c->offsetRate.j);
+			//art_c.setParameter(DtApYRate, 0);
 			art_c.setParameter(DtApZ, j_c->offset.k);
-			//art_c.setParameter(DtApZRate, j_c->offsetRate.k);
+			//art_c.setParameter(DtApZRate, 0);
 			j_c = j_c->sibling_next;
 			artPartCol->attachPart(&art_c, &art_p);
 		}
@@ -379,6 +379,7 @@ bool CVrlinkDisDynamic::ReceiveArt(GlobalId id_global, cvTObjState* s)
 		while (!bft_queue.empty())
 		{
 			TAvatarJoint* j_p = bft_queue.front();
+			DtArticulatedPart& art_p = artPartCol->getPart(j_p->type);
 			bft_queue.pop();
 			TAvatarJoint* j_c = j_p->child_first;
 			while (NULL != j_c)
@@ -397,6 +398,7 @@ bool CVrlinkDisDynamic::ReceiveArt(GlobalId id_global, cvTObjState* s)
 				//j_c->offsetRate.j = art_c.getParameterValue(DtApYRate);
 				j_c->offset.k = art_c.getParameterValue(DtApZ);
 				//j_c->offsetRate.k = art_c.getParameterValue(DtApZRate);
+				artPartCol->attachPart(&art_c, &art_p);
 				j_c = j_c->sibling_next;
 			}
 		}
