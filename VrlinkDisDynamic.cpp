@@ -201,7 +201,7 @@ void CVrlinkDisDynamic::SendArt(IP ip, GlobalId id_global, const cvTObjState* s)
 #endif
 	epb.view->setVelocity(stateTran.vel);
 	epb.view->setAcceleration(stateTran.acc);
-	epb.view->setRotationalVelocity(stateTran.rot);
+	epb.view->setRotationalVelocity(stateTran.rot_v);
 	epb.view->setLocation(stateTran.loc);
 	epb.view->setOrientation(stateTran.ori);
 	//traverse the joint angle tree: for sending the articulated structure joints
@@ -237,7 +237,11 @@ void CVrlinkDisDynamic::SendArt(IP ip, GlobalId id_global, const cvTObjState* s)
 			art_c.setParameter(DtApZ, j_c->offset.k);
 			//art_c.setParameter(DtApZRate, 0);
 			j_c = j_c->sibling_next;
-			artPartCol->attachPart(&art_c, &art_p);
+			bool attached = artPartCol->attachPart(&art_c, &art_p);
+#ifdef _DEBUG
+			if (!attached)
+				TRACE(TEXT("\nerror: attaching %s <== %s failed"), j_p->name, j_c->name);
+#endif
 		}
 	}
 #ifdef _DEBUG
@@ -252,8 +256,8 @@ void CVrlinkDisDynamic::SendArt(IP ip, GlobalId id_global, const cvTObjState* s)
 	unsigned char* seg = (unsigned char*)&ip;
 	TRACE(TEXT("vrlink: sendArt to [%d.%d.%d.%d]\n"), seg[0], seg[1], seg[2], seg[3]);
 }
-void CVrlinkDisDynamic::Send(IP ip, GlobalId id_global, const cvTObjState* s)
 
+void CVrlinkDisDynamic::Send(IP ip, GlobalId id_global, const cvTObjState* s)
 {
 	EntityPublisher epb;
 	bool exists_a_pub = getEntityPub(ip, id_global, epb);
@@ -290,9 +294,23 @@ void CVrlinkDisDynamic::Send(IP ip, GlobalId id_global, const cvTObjState* s)
 #endif
 	epb.view->setVelocity(stateTran.vel);
 	epb.view->setAcceleration(stateTran.acc);
-	epb.view->setRotationalVelocity(stateTran.rot);
+	epb.view->setRotationalVelocity(stateTran.rot_v);
 	epb.view->setLocation(stateTran.loc);
 	epb.view->setOrientation(stateTran.ori);
+
+	//sending out steering wheel angles and tire rotation
+	DtEntityStateRepository* entity = epb.pub->esr();
+	DtArticulatedPartCollection* artPartCol = entity->artPartList();
+	DtArticulatedPart& art_sw = artPartCol->getPart(ART_SteeringWheel);
+	art_sw.setParameter(DtApRotation, stateTran.steeringWheel.rot);
+	unsigned int tireId[] = { ART_Tire0, ART_Tire1, ART_Tire2 };
+	float rot_v[] = { stateTran.tire.rot[0], stateTran.tire.rot[1], stateTran.tire.rot[2] };
+	for (int i_tire = 0; i_tire < sizeof(tireId) / sizeof(unsigned int); i_tire++)
+	{
+		DtArticulatedPart& art_tire = artPartCol->getPart(tireId[i_tire]);
+		art_tire.setParameter(DtApRotation, rot_v[i_tire]);
+	}
+	
 
 	//CPduExtObj pduObj(id_global, sb.state.externalDriverState);
 	//epb.cnn->sendStamped(pduObj);
@@ -318,9 +336,21 @@ bool CVrlinkDisDynamic::Receive(GlobalId id_global, cvTObjState* state)
 		ExternalDriverStateTran stateTran;
 		stateTran.vel = view.velocity();
 		stateTran.acc = view.acceleration();
-		stateTran.rot = view.rotationalVelocity();
+		stateTran.rot_v = view.rotationalVelocity();
 		stateTran.loc = view.location();
 		stateTran.ori = view.orientation();
+
+		DtArticulatedPartCollection* artPartCol = esr->artPartList();
+		DtArticulatedPart& art_sw = artPartCol->getPart(ART_SteeringWheel);
+		stateTran.steeringWheel.rot = art_sw.getParameterValue(DtApRotation);
+		unsigned int tire_id[] = { ART_Tire0, ART_Tire1, ART_Tire2 };
+		double* tire_rot = stateTran.tire.rot;
+		for (int i_tire = 0; i_tire < sizeof(tire_id) / sizeof(unsigned int); i_tire++)
+		{
+			DtArticulatedPart& art_tire = artPartCol->getPart(tire_id[i_tire]);
+			float rot = art_tire.getParameterValue(DtApRotation);
+			tire_rot[i_tire] = rot;
+		}
 
 		cvTObjState::VehicleState* s = (cvTObjState::VehicleState*)&state->vehicleState;
 		Transform(stateTran, *s);
@@ -366,7 +396,7 @@ bool CVrlinkDisDynamic::ReceiveArt(GlobalId id_global, cvTObjState* s)
 		cvTObjState::AvatarState* s_a = (cvTObjState::AvatarState*)&s->avatarState;
 		stateTran.vel = view.velocity();
 		stateTran.acc = view.acceleration();
-		stateTran.rot = view.rotationalVelocity();
+		stateTran.rot_v = view.rotationalVelocity();
 		stateTran.loc = view.location();
 		stateTran.ori = view.orientation();
 		stateTran.child_first = s_a->child_first;
@@ -398,7 +428,11 @@ bool CVrlinkDisDynamic::ReceiveArt(GlobalId id_global, cvTObjState* s)
 				//j_c->offsetRate.j = art_c.getParameterValue(DtApYRate);
 				j_c->offset.k = art_c.getParameterValue(DtApZ);
 				//j_c->offsetRate.k = art_c.getParameterValue(DtApZRate);
-				artPartCol->attachPart(&art_c, &art_p);
+				bool attached = artPartCol->attachPart(&art_c, &art_p);
+#ifdef _DEBUG
+				if (!attached)
+					TRACE(TEXT("\nerror: attaching %s <== %s failed"), j_p->name, j_c->name);
+#endif
 				j_c = j_c->sibling_next;
 			}
 		}

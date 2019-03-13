@@ -238,12 +238,25 @@ typedef struct ExternalDriverStateTran_tag
 {
 	DtVector32  vel;
 	DtVector32  acc;
-	DtVector32  rot;
+	DtVector32  rot_v;
 	DtVector    loc;
 	DtTaitBryan ori;
+
+	struct SteeringWheel
+	{
+		double rot;
+	} steeringWheel;
+
+	struct Tire
+	{
+		double rot[3];
+	} tire;
+
 } ExternalDriverStateTran;
 
-typedef struct ExternalDriverStateTranLO_tag
+enum {ART_SteeringWheel = 4096, ART_Tire0 = 4128, ART_Tire1 = 4160, ART_Tire2 = 4192};
+
+typedef struct ExternalDriverStateTranLO_tag //fixme: going to be removed
 {
 	DtVector    loc;
 	DtTaitBryan ori;
@@ -253,7 +266,7 @@ typedef struct AvatarStateTran_tag
 {
 	DtVector32  vel;
 	DtVector32  acc;
-	DtVector32  rot;
+	DtVector32  rot_v;
 	DtVector    loc;
 	DtTaitBryan ori;
 	TAvatarJoint*     child_first;
@@ -277,8 +290,14 @@ inline void Transform(const cvTObjState::ExternalDriverState& src, ExternalDrive
 	dst.acc.setY(a * src.tangent.j + al * src.lateral.j);
 	dst.acc.setZ(a * src.tangent.k + al * src.lateral.k);
 
-	AVSim2Vrlink(src.angularVel, dst.rot, src.tangent, src.lateral);
+	AVSim2Vrlink(src.angularVel, dst.rot_v, src.tangent, src.lateral);
 	Frame2TaitBryan(c_t0, c_l0, src.tangent, src.lateral, dst.ori);
+
+	//fixme: currently VehicleState and ExternalDriverState are not compatible on the steeringWheel
+	dst.steeringWheel.rot = src.steeringWheelAngle;
+	dst.tire.rot[0] = src.tireRot[0];
+	dst.tire.rot[1] = src.tireRot[1];
+	dst.tire.rot[2] = src.tireRot[2];
 }
 
 inline void TransformLO(const cvTObjState::ExternalDriverState& src, ExternalDriverStateTranLO& dst)
@@ -313,11 +332,16 @@ inline void Transform(const ExternalDriverStateTran& src, cvTObjState::VehicleSt
 
 
 	TVector3D angularVel;
-	AVVrlink2SimRad(src.rot, angularVel, dst.tangent, dst.lateral);
-	dst.steeringWheelAngle = 0; //angularVel.k;
+	AVVrlink2SimRad(src.rot_v, angularVel, dst.tangent, dst.lateral);
 	dst.rollRate = rad2deg(angularVel.i);
 	dst.pitchRate = rad2deg(angularVel.j);
 	dst.yawRate = rad2deg(angularVel.k);
+
+	dst.steeringWheelAngle = src.steeringWheel.rot;
+	dst.tireRot[0] = src.tire.rot[0]; 
+	dst.tireRot[1] = src.tire.rot[1]; 
+	dst.tireRot[2] = src.tire.rot[2];
+	
 }
 
 inline void Transform(const cvTObjState::AvatarState& src, AvatarStateTran& dst)
@@ -352,7 +376,7 @@ inline void Transform(const AvatarStateTran& src, cvTObjState::AvatarState& dst)
 
 
 	TVector3D angularVel;
-	AVVrlink2SimRad(src.rot, angularVel, dst.tangent, dst.lateral);
+	AVVrlink2SimRad(src.rot_v, angularVel, dst.tangent, dst.lateral);
 
 	dst.child_first = src.child_first;
 }

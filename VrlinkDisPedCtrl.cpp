@@ -37,5 +37,5 @@ void CVrlinkDisPedCtrl::Send(IP ip, GlobalId id_global, const cvTObjState* s)
 	epb.cnn->sendStamped(pduObj);
 
 	unsigned char* seg = (unsigned char*)&ip;
-	TRACE(TEXT("vrlink: send to [%d.%d.%d.%d]\n"), seg[0], seg[1], seg[2], seg[3]);
+	TRACE(TEXT("CVrlinkDisPedCtrl: send to [%d.%d.%d.%d]\n"), seg[0], seg[1], seg[2], seg[3]);
 }
