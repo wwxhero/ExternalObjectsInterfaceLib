@@ -211,36 +211,40 @@ void CVrlinkDisDynamic::SendArt(IP ip, GlobalId id_global, const cvTObjState* s)
 	unsigned int n_params = artPartCol->totalParameterCount();
 	unsigned int n_parts = artPartCol->partCount();
 #endif
-	TAvatarJoint root = VIRTUAL_ROOT(stateTran.child_first);
+	TAvatarJoint* root = stateTran.child_first;
 	std::queue<TAvatarJoint*> bft_queue;
-	bft_queue.push(&root);
+	bft_queue.push(root);
 	while (!bft_queue.empty())
 	{
 		TAvatarJoint* j_p = bft_queue.front();
 		DtArticulatedPart& art_p = artPartCol->getPart(j_p->type);
+		art_p.setParameter(DtApAzimuth, j_p->angle.k);
+		art_p.setParameter(DtApElevation, j_p->angle.j);
+		art_p.setParameter(DtApRotation, j_p->angle.i);
+		art_p.setParameter(DtApX, j_p->offset.i);
+		art_p.setParameter(DtApY, j_p->offset.j);
+		art_p.setParameter(DtApZ, j_p->offset.k);
 		bft_queue.pop();
 		TAvatarJoint* j_c = j_p->child_first;
 		while (NULL != j_c)
 		{
 			bft_queue.push(j_c);
 			DtArticulatedPart& art_c = artPartCol->getPart(j_c->type);
-			art_c.setParameter(DtApAzimuth, j_c->angle.k);
-			//art_c.setParameter(DtApAzimuthRate, 0);
-			art_c.setParameter(DtApElevation, j_c->angle.j);
-			//art_c.setParameter(DtApElevationRate, 0);
-			art_c.setParameter(DtApRotation, j_c->angle.i);
-			//art_c.setParameter(DtApRotationRate, 0);
-			art_c.setParameter(DtApX, j_c->offset.i);
-			//art_c.setParameter(DtApXRate, 0);
-			art_c.setParameter(DtApY, j_c->offset.j);
-			//art_c.setParameter(DtApYRate, 0);
-			art_c.setParameter(DtApZ, j_c->offset.k);
-			//art_c.setParameter(DtApZRate, 0);
 			j_c = j_c->sibling_next;
-			bool attached = artPartCol->attachPart(&art_c, &art_p);
+			DtArticulatedPartCollection::DtAttachResult result = DtArticulatedPartCollection::DtAttachSuccess;
+			bool attached = artPartCol->attachPart(&art_c, &art_p, &result);
 #ifdef _DEBUG
-			if (!attached)
-				TRACE(TEXT("\nerror: attaching %s <== %s failed"), j_p->name, j_c->name);
+			if (!attached
+			|| DtArticulatedPartCollection::DtAttachSuccess != result)
+			{
+				const char* results[] = {
+					"DtAttachSuccess",
+					"DtAttachFailNullChild",
+					"DtAttachFailNullParent",
+					"DtAttachFailCycle"
+				};
+				TRACE(TEXT("\n%s: attaching %s <== %s failed"), results[result], j_p->name, j_c->name);
+			}
 #endif
 		}
 	}
@@ -310,7 +314,7 @@ void CVrlinkDisDynamic::Send(IP ip, GlobalId id_global, const cvTObjState* s)
 		DtArticulatedPart& art_tire = artPartCol->getPart(tireId[i_tire]);
 		art_tire.setParameter(DtApRotation, rot_v[i_tire]);
 	}
-	
+
 
 	//CPduExtObj pduObj(id_global, sb.state.externalDriverState);
 	//epb.cnn->sendStamped(pduObj);
@@ -403,37 +407,41 @@ bool CVrlinkDisDynamic::ReceiveArt(GlobalId id_global, cvTObjState* s)
 
 		//traverse the joint angle tree: for reading the articulated structure joints
 		DtArticulatedPartCollection* artPartCol = esr->artPartList();
-		TAvatarJoint root = VIRTUAL_ROOT(stateTran.child_first);
+		TAvatarJoint* root = stateTran.child_first;
 		std::queue<TAvatarJoint*> bft_queue;
-		bft_queue.push(&root);
+		bft_queue.push(root);
 		while (!bft_queue.empty())
 		{
 			TAvatarJoint* j_p = bft_queue.front();
 			DtArticulatedPart& art_p = artPartCol->getPart(j_p->type);
+			j_p->angle.k = art_p.getParameterValue(DtApAzimuth);
+			j_p->angle.j = art_p.getParameterValue(DtApElevation);
+			j_p->angle.i = art_p.getParameterValue(DtApRotation);
+			j_p->offset.i = art_p.getParameterValue(DtApX);
+			j_p->offset.j = art_p.getParameterValue(DtApY);
+			j_p->offset.k = art_p.getParameterValue(DtApZ);
 			bft_queue.pop();
 			TAvatarJoint* j_c = j_p->child_first;
 			while (NULL != j_c)
 			{
 				bft_queue.push(j_c);
 				DtArticulatedPart& art_c = artPartCol->getPart(j_c->type);
-				j_c->angle.k = art_c.getParameterValue(DtApAzimuth);
-				//j_c->angleRate.k = art_c.getParameterValue(DtApAzimuthRate);
-				j_c->angle.j = art_c.getParameterValue(DtApElevation);
-				//j_c->angleRate.j = art_c.getParameterValue(DtApElevationRate);
-				j_c->angle.i = art_c.getParameterValue(DtApRotation);
-				//j_c->angleRate.i = art_c.getParameterValue(DtApRotationRate);
-				j_c->offset.i = art_c.getParameterValue(DtApX);
-				//j_c->offsetRate.i = art_c.getParameterValue(DtApXRate);
-				j_c->offset.j = art_c.getParameterValue(DtApY);
-				//j_c->offsetRate.j = art_c.getParameterValue(DtApYRate);
-				j_c->offset.k = art_c.getParameterValue(DtApZ);
-				//j_c->offsetRate.k = art_c.getParameterValue(DtApZRate);
-				bool attached = artPartCol->attachPart(&art_c, &art_p);
-#ifdef _DEBUG
-				if (!attached)
-					TRACE(TEXT("\nerror: attaching %s <== %s failed"), j_p->name, j_c->name);
-#endif
 				j_c = j_c->sibling_next;
+				DtArticulatedPartCollection::DtAttachResult result = DtArticulatedPartCollection::DtAttachSuccess;
+				bool attached = artPartCol->attachPart(&art_c, &art_p, &result);
+#ifdef _DEBUG
+				if (!attached
+				|| DtArticulatedPartCollection::DtAttachSuccess != result)
+				{
+					const char* results[] = {
+						"DtAttachSuccess",
+						"DtAttachFailNullChild",
+						"DtAttachFailNullParent",
+						"DtAttachFailCycle"
+					};
+					TRACE(TEXT("\n%s: attaching %s <== %s failed"), results[result], j_p->name, j_c->name);
+				}
+#endif
 			}
 		}
 

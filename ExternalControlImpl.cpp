@@ -185,7 +185,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdate(TObjectPoolIdx id_lo
 	{
 		IP ipCluster = *it;
 		unsigned char* ipv4 = (unsigned char*)&ipCluster;
-		TRACE(TEXT("Send to(IPV4):%d.%d.%d.%d\n")
+		TRACE(TEXT("\nSend to(IPV4):%d.%d.%d.%d\n")
 										, ipv4[0], ipv4[1], ipv4[2], ipv4[3]);
 		Send(ipCluster, id_global, nextState);
 	}
