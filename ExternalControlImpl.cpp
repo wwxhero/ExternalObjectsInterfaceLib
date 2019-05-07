@@ -102,6 +102,21 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_
 		//assert(0);
 		return false;
 	}
+	const struct cvTObjState::AvatarState& s_a = curState->avatarState;
+	bool peggedToPeer = (s_a.parentId > 0);
+	bool peggedToSelf = (0 == s_a.parentId);
+	GlobalId idParent;
+	if (peggedToSelf)
+	{
+		idParent.owner = m_selfIp;
+		idParent.objId = 0;
+	}
+	else if(peggedToPeer)
+	{
+		std::map<TObjectPoolIdx, GlobalId>::iterator itParent = m_mapLid2GidR.find(s_a.parentId);
+		assert(itParent != m_mapLid2GidR.end());
+		idParent = itParent->second;
+	}
 	cvTObjState::AnyObjState* s = &(curState->anyState);
 	const TVector3D boxOffset[2] = {
 			{
@@ -116,7 +131,9 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_
 			}
 	};
 	GlobalId id_global = (*it).second;
-	bool recieved = ReceiveArt(id_global, curState);
+	bool pegged = (peggedToPeer || peggedToSelf);
+	bool recieved = (pegged || ReceiveArt(id_global, curState))
+					&& (!pegged || ReceiveArt(id_global, idParent, curState));
 	if (recieved)
 	{
 		for (int i = 0; i < 2; i ++)
@@ -135,7 +152,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_
 	const unsigned char* seg = (const unsigned char*)&id_global.owner;
 	int idx = recieved? 1: 0;
 	//curState->externalDriverState.visualState = 2;
-	const struct cvTObjState::AvatarState& s_a = curState->avatarState;
+	//const struct cvTObjState::AvatarState& s_a = curState->avatarState;
 	TRACE(TEXT("OnGetUpdate %s id:%d from ip:[%d.%d.%d.%d]")
 							TEXT(", \n\t position: [%E,%E,%E]")
 							TEXT(", \n\t tangent: [%E,%E,%E]")
@@ -224,13 +241,22 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdateArt(TObjectPoolIdx id
 {
 	//todo: push articulated structure data stored from nextState
 	GlobalId id_global = {m_selfIp, id_local};
+	const struct cvTObjState::AvatarState& s_a = nextState->avatarState;
+	bool pegged = (s_a.parentId > 0);
 	for (std::list<IP>::iterator it = m_multicastTo.begin(); it != m_multicastTo.end(); it ++)
 	{
 		IP ipCluster = *it;
 		unsigned char* ipv4 = (unsigned char*)&ipCluster;
 		TRACE(TEXT("Send articulated to(IPV4):%d.%d.%d.%d\n")
 										, ipv4[0], ipv4[1], ipv4[2], ipv4[3]);
-		SendArt(ipCluster, id_global, nextState);
+		if (pegged)
+		{
+			std::map<TObjectPoolIdx, GlobalId>::iterator itParent = m_mapLid2GidR.find(s_a.parentId);
+			assert(itParent != m_mapLid2GidR.end());
+			SendArt(ipCluster, id_global, itParent->second, nextState);
+		}
+		else
+			SendArt(ipCluster, id_global, nextState);
 	}
 #ifdef _DEBUG
 	const struct cvTObjState::AvatarState& s = nextState->avatarState;
@@ -364,7 +390,18 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 			m_mapLid2GidR.insert(std::pair<TObjectPoolIdx, GlobalId>(id_local, id_global));
 		}
 
+		if (ownPedBlk || peerPedBlk)
+		{
+			const string parent = hBlk.GetPegTo();
+			if (parent.length() > 0)
+			{
+				string child = hBlk.GetSimName();
+				pCvedDistri->PeggingPair(parent, child);
+			}
+		}
 	} while (hBlk.NextExternalBlk());
+
+	pCvedDistri->PegPDOs();
 
 	bool ok = (numSelf > 0); //scene includes this computer as a terminal
 	if (ok)

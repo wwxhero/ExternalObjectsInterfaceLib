@@ -164,6 +164,120 @@ void CVrlinkDisDynamic::OnReceiveRawPdu( CCustomPdu* pdu, void* p)
 	pExtObj->printData();
 #endif
 }
+
+void CVrlinkDisDynamic::SendArt(IP ip, GlobalId id_global, GlobalId id_parent, const cvTObjState* s)
+{
+	EntityPublisher epb;
+	bool exists_a_pub = getEntityPub(ip, id_global, epb);
+	ASSERT(exists_a_pub);
+	DtObjectId eidParent = GlobalId2VrlinkId(id_parent);
+	DtReflectedEntity* e_parent = m_entitiesIn->lookup(eidParent);
+	ASSERT(NULL != e_parent);
+	if (!exists_a_pub
+		|| NULL == e_parent)
+		return;
+	DtEntityStateRepository *esr_parent = e_parent->entityStateRep();
+	assert(NULL != esr_parent);
+	esr_parent->setAlgorithm((DtDeadReckonTypes)s_disConf.drAlgor);
+	esr_parent->useSmoother(s_disConf.smoothOn);
+	DtTopoView view_parent(esr_parent, s_disConf.latitude, s_disConf.longitude);
+	ExternalDriverStateTran stateTranParent;
+	stateTranParent.vel = view_parent.velocity();
+	stateTranParent.acc = view_parent.acceleration();
+	stateTranParent.rot_v = view_parent.rotationalVelocity();
+	stateTranParent.loc = view_parent.location();
+	stateTranParent.ori = view_parent.orientation();
+	AvatarStateTran stateTran;
+	Transform(s->avatarState, stateTranParent, stateTran);
+
+#ifdef _VERIFY_TRANSFORM
+	const cvTObjState::AvatarState& es = s->externalDriverState;
+	glm::vec3 angularVel(stateTran.rot.x(), stateTran.rot.y(), stateTran.rot.z());
+	float aL = rad2deg(glm::length(angularVel));
+	glm::vec3 aDir = glm::normalize(angularVel);
+	cvTObjState::AvatarState es_prime;
+	Transform(stateTran, es_prime);
+	TRACE(TEXT("Send id:%d, \n\t position: [%E,%E,%E]->[%E,%E,%E]")
+							TEXT(", \n\t tangent: [%E,%E,%E]->[%E,%E,%E]")
+							TEXT(", \n\t lateral: [%E,%E,%E]->[%E,%E,%E]")
+							TEXT(", \n\t vel: [%E]->[%E]")
+							TEXT(", \n\t acc: [%E]->[%E]")
+							TEXT(", \n\t latAccel: [%E]->[%E]")
+							TEXT(", \n\t angularVel: [%E, %E, %E]->[%E, %E, %E] = [%E]*<%E, %E, %E>\n")
+							TEXT(", \n\t euler: [%E, %E, %E]\n")
+				, 0
+				, es.position.x, es.position.y, es.position.z, es_prime.position.x, es_prime.position.y, es_prime.position.z
+				, es.tangent.i, es.tangent.j, es.tangent.k, es_prime.tangent.i, es_prime.tangent.j, es_prime.tangent.k
+				, es.lateral.i, es.lateral.j, es.lateral.k, es_prime.lateral.i, es_prime.lateral.j, es_prime.lateral.k
+				, es.vel, es_prime.vel
+				, es.acc, es_prime.acc
+				, es.latAccel, es_prime.latAccel
+				, es.angularVel.i, es.angularVel.j, es.angularVel.k, es_prime.angularVel.i, es_prime.angularVel.j, es_prime.angularVel.k, aL, aDir.x, aDir.y, aDir.z
+				, stateTran.ori.phi(), stateTran.ori.theta(), stateTran.ori.psi());
+#endif
+	//fixme: the pegged avatar (car driver) could ommit sending the entity basic state for better avatar control
+	epb.view->setVelocity(stateTran.vel);
+	epb.view->setAcceleration(stateTran.acc);
+	epb.view->setRotationalVelocity(stateTran.rot_v);
+	epb.view->setLocation(stateTran.loc);
+	epb.view->setOrientation(stateTran.ori);
+	//traverse the joint angle tree: for sending the articulated structure joints
+	DtEntityStateRepository* entity = epb.pub->esr();
+	DtArticulatedPartCollection* artPartCol = entity->artPartList();
+#ifdef _DEBUG
+	unsigned int n_params = artPartCol->totalParameterCount();
+	unsigned int n_parts = artPartCol->partCount();
+#endif
+	TAvatarJoint* root = stateTran.child_first;
+	std::queue<TAvatarJoint*> bft_queue;
+	bft_queue.push(root);
+	while (!bft_queue.empty())
+	{
+		TAvatarJoint* j_p = bft_queue.front();
+		DtArticulatedPart& art_p = artPartCol->getPart(j_p->type);
+		art_p.setParameter(DtApAzimuth, j_p->angle.k);
+		art_p.setParameter(DtApElevation, j_p->angle.j);
+		art_p.setParameter(DtApRotation, j_p->angle.i);
+		art_p.setParameter(DtApX, j_p->offset.i);
+		art_p.setParameter(DtApY, j_p->offset.j);
+		art_p.setParameter(DtApZ, j_p->offset.k);
+		bft_queue.pop();
+		TAvatarJoint* j_c = j_p->child_first;
+		while (NULL != j_c)
+		{
+			bft_queue.push(j_c);
+			DtArticulatedPart& art_c = artPartCol->getPart(j_c->type);
+			j_c = j_c->sibling_next;
+			DtArticulatedPartCollection::DtAttachResult result = DtArticulatedPartCollection::DtAttachSuccess;
+			bool attached = artPartCol->attachPart(&art_c, &art_p, &result);
+#ifdef _DEBUG
+			if (!attached
+			|| DtArticulatedPartCollection::DtAttachSuccess != result)
+			{
+				const char* results[] = {
+					"DtAttachSuccess",
+					"DtAttachFailNullChild",
+					"DtAttachFailNullParent",
+					"DtAttachFailCycle"
+				};
+				TRACE(TEXT("\n%s: attaching %s <== %s failed"), results[result], j_p->name, j_c->name);
+			}
+#endif
+		}
+	}
+#ifdef _DEBUG
+	unsigned int n_params_prime = artPartCol->totalParameterCount();
+	unsigned int n_parts_prime = artPartCol->partCount();
+	TRACE(TEXT("\narticulated params:%d=>%d parts:%d=>%d\n"), n_params, n_params_prime, n_parts, n_parts_prime);
+#endif
+
+	//CPduExtObj pduObj(id_global, sb.state.externalDriverState);
+	//epb.cnn->sendStamped(pduObj);
+
+	unsigned char* seg = (unsigned char*)&ip;
+	TRACE(TEXT("vrlink: sendArt to [%d.%d.%d.%d]\n"), seg[0], seg[1], seg[2], seg[3]);
+}
+
 void CVrlinkDisDynamic::SendArt(IP ip, GlobalId id_global, const cvTObjState* s)
 {
 	EntityPublisher epb;
@@ -377,6 +491,88 @@ bool CVrlinkDisDynamic::Receive(GlobalId id_global, cvTObjState* state)
 			TRACE(TEXT("vrlink:raw pdu received from %d.%d.%d.%d:[%d]\n"), seg[0], seg[1], seg[2], seg[3], rs.id.objId);
 		}
 
+	}
+	return received;
+}
+bool CVrlinkDisDynamic::ReceiveArt(GlobalId id_global, GlobalId id_parent, cvTObjState* s)
+{
+	DtObjectId eid = GlobalId2VrlinkId(id_global);
+	DtReflectedEntity* e = m_entitiesIn->lookup(eid);
+	DtObjectId eidParent = GlobalId2VrlinkId(id_parent);
+	DtReflectedEntity* e_parent = m_entitiesIn->lookup(eidParent);
+	bool received = (NULL != e && NULL != e_parent);
+	if (received)
+	{
+		unsigned char* ip = (unsigned char*)&id_global.owner;
+		TRACE(TEXT("vrlink: received from [%d.%d.%d.%d]\n"), ip[0], ip[1], ip[2], ip[3]);
+
+		DtEntityStateRepository *esr = e->entityStateRep();
+		assert(NULL != esr);
+		esr->setAlgorithm((DtDeadReckonTypes)s_disConf.drAlgor);
+		esr->useSmoother(s_disConf.smoothOn);
+		DtTopoView view(esr, s_disConf.latitude, s_disConf.longitude);
+		AvatarStateTran stateTran;
+		cvTObjState::AvatarState* s_a = (cvTObjState::AvatarState*)&s->avatarState;
+		stateTran.vel = view.velocity();
+		stateTran.acc = view.acceleration();
+		stateTran.rot_v = view.rotationalVelocity();
+		stateTran.loc = view.location();
+		stateTran.ori = view.orientation();
+		stateTran.child_first = s_a->child_first;
+
+		//traverse the joint angle tree: for reading the articulated structure joints
+		DtArticulatedPartCollection* artPartCol = esr->artPartList();
+		TAvatarJoint* root = stateTran.child_first;
+		std::queue<TAvatarJoint*> bft_queue;
+		bft_queue.push(root);
+		while (!bft_queue.empty())
+		{
+			TAvatarJoint* j_p = bft_queue.front();
+			DtArticulatedPart& art_p = artPartCol->getPart(j_p->type);
+			j_p->angle.k = art_p.getParameterValue(DtApAzimuth);
+			j_p->angle.j = art_p.getParameterValue(DtApElevation);
+			j_p->angle.i = art_p.getParameterValue(DtApRotation);
+			j_p->offset.i = art_p.getParameterValue(DtApX);
+			j_p->offset.j = art_p.getParameterValue(DtApY);
+			j_p->offset.k = art_p.getParameterValue(DtApZ);
+			bft_queue.pop();
+			TAvatarJoint* j_c = j_p->child_first;
+			while (NULL != j_c)
+			{
+				bft_queue.push(j_c);
+				DtArticulatedPart& art_c = artPartCol->getPart(j_c->type);
+				j_c = j_c->sibling_next;
+				DtArticulatedPartCollection::DtAttachResult result = DtArticulatedPartCollection::DtAttachSuccess;
+				bool attached = artPartCol->attachPart(&art_c, &art_p, &result);
+#ifdef _DEBUG
+				if (!attached
+				|| DtArticulatedPartCollection::DtAttachSuccess != result)
+				{
+					const char* results[] = {
+						"DtAttachSuccess",
+						"DtAttachFailNullChild",
+						"DtAttachFailNullParent",
+						"DtAttachFailCycle"
+					};
+					TRACE(TEXT("\n%s: attaching %s <== %s failed"), results[result], j_p->name, j_c->name);
+				}
+#endif
+			}
+		}
+
+		DtEntityStateRepository *esr_parent = e_parent->entityStateRep();
+		assert(NULL != esr_parent);
+		esr_parent->setAlgorithm((DtDeadReckonTypes)s_disConf.drAlgor);
+		esr_parent->useSmoother(s_disConf.smoothOn);
+		DtTopoView view_parent(esr_parent, s_disConf.latitude, s_disConf.longitude);
+		ExternalDriverStateTran stateTranParent;
+		stateTranParent.vel = view_parent.velocity();
+		stateTranParent.acc = view_parent.acceleration();
+		stateTranParent.rot_v = view_parent.rotationalVelocity();
+		stateTranParent.loc = view_parent.location();
+		stateTranParent.ori = view_parent.orientation();
+
+		Transform(stateTran, stateTranParent, *s_a);
 	}
 	return received;
 }

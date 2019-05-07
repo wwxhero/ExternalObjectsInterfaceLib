@@ -28,8 +28,10 @@ public:
 	virtual void PreDynaCalc() = 0;
 	virtual void Send(IP ip, GlobalId id_global, const cvTObjState* s) = 0;
 	virtual void SendArt(IP ip, GlobalId id_global, const cvTObjState* s) = 0;
+	virtual void SendArt(IP ip, GlobalId id_global, GlobalId id_parent, const cvTObjState* s) = 0;
 	virtual bool Receive(GlobalId id_global, cvTObjState* s) = 0;
 	virtual bool ReceiveArt(GlobalId id_global, cvTObjState* s) = 0;
+	virtual bool ReceiveArt(GlobalId id_global, GlobalId id_parent, cvTObjState* s) = 0;
 	virtual void Notify_OnNewAdo(GlobalId id
 							, const char* szName
 							, const cvTObjAttr& cAttr
