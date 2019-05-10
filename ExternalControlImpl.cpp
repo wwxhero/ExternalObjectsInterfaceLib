@@ -149,11 +149,16 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_
 		TEXT("NReceived")
 		, TEXT("Received")
 	};
+	const TCHAR* pegFlag[] = {
+		TEXT("NPegged")
+		, TEXT("Pegged")
+	};
 	const unsigned char* seg = (const unsigned char*)&id_global.owner;
-	int idx = recieved? 1: 0;
+	int i_rec = recieved? 1: 0;
+	int i_peg = pegged? 1: 0;
 	//curState->externalDriverState.visualState = 2;
 	//const struct cvTObjState::AvatarState& s_a = curState->avatarState;
-	TRACE(TEXT("OnGetUpdate %s id:%d from ip:[%d.%d.%d.%d]")
+	TRACE(TEXT("OnGetUpdate %s id:%d from ip:[%d.%d.%d.%d] %s")
 							TEXT(", \n\t position: [%E,%E,%E]")
 							TEXT(", \n\t tangent: [%E,%E,%E]")
 							TEXT(", \n\t lateral: [%E,%E,%E]")
@@ -162,7 +167,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_
 							TEXT(", \n\t acc: [%E]")
 							TEXT(", \n\t latAccel: [%E]")
 							TEXT(", \n\t angularVel: [%E, %E, %E]\n")
-										, recFlag[idx], id_local, seg[0], seg[1], seg[2], seg[3]
+										, recFlag[i_rec], id_local, seg[0], seg[1], seg[2], seg[3], pegFlag[i_peg]
 										, s_a.position.x, s_a.position.y, s_a.position.z
 										, s_a.tangent.i, s_a.tangent.j, s_a.tangent.k
 										, s_a.lateral.i, s_a.lateral.j, s_a.lateral.k
@@ -259,8 +264,13 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdateArt(TObjectPoolIdx id
 			SendArt(ipCluster, id_global, nextState);
 	}
 #ifdef _DEBUG
+	const TCHAR* pegFlag[] = {
+		TEXT("NPegged")
+		, TEXT("Pegged")
+	};
+	int i_peg = pegged ? 1 : 0;
 	const struct cvTObjState::AvatarState& s = nextState->avatarState;
-	TRACE(TEXT("OnPushUpdateArt id:%d, \n\t position: [%E,%E,%E]")
+	TRACE(TEXT("OnPushUpdateArt id:%d, \n\t position: [%E,%E,%E] %s")
 							TEXT(", \n\t tangent: [%E,%E,%E]")
 							TEXT(", \n\t lateral: [%E,%E,%E]")
 							TEXT(", \n\t bbox: [%E,%E,%E], [%E,%E,%E]")
@@ -269,8 +279,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdateArt(TObjectPoolIdx id
 							TEXT(", \n\t acc: [%E]")
 							TEXT(", \n\t latAccel: [%E]")
 							TEXT(", \n\t angularVel: [%E, %E, %E]")
-										, id_local
-										, s.position.x, s.position.y, s.position.z
+										, id_local, s.position.x, s.position.y, s.position.z, pegFlag[i_peg]
 										, s.tangent.i, s.tangent.j, s.tangent.k
 										, s.lateral.i, s.lateral.j, s.lateral.k
 										, s.boundBox[0].x, s.boundBox[0].y, s.boundBox[0].z
@@ -347,7 +356,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 
 		if (peerEdoBlk)
 		{
-			CVED::CDynObj* peerObj = pCvedDistri->LocalCreateEDO(hBlk);
+			CVED::CDynObj* peerObj = pCvedDistri->LocalCreateEDO(hBlk, false);
 			id_local = peerObj->GetId();
 			GlobalId id_global = {simIP, 0};
 			m_mapGid2ObjR[id_global] = peerObj;
@@ -355,7 +364,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 		}
 		else if (ownEdoBlk)
 		{
-			CVED::CDynObj* psudoOwn = pCvedDistri->LocalCreateEDO(hBlk);
+			CVED::CDynObj* psudoOwn = pCvedDistri->LocalCreateEDO(hBlk, true);
 			CPoint3D pos = psudoOwn->GetPos();
 			CVector3D tan = psudoOwn->GetTan();
 			CVector3D lat = psudoOwn->GetLat();

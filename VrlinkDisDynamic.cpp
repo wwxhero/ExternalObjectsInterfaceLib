@@ -172,7 +172,7 @@ void CVrlinkDisDynamic::SendArt(IP ip, GlobalId id_global, GlobalId id_parent, c
 	ASSERT(exists_a_pub);
 	DtObjectId eidParent = GlobalId2VrlinkId(id_parent);
 	DtReflectedEntity* e_parent = m_entitiesIn->lookup(eidParent);
-	ASSERT(NULL != e_parent);
+	//ASSERT(NULL != e_parent); in case parent is not connected, it does not send anything out
 	if (!exists_a_pub
 		|| NULL == e_parent)
 		return;
