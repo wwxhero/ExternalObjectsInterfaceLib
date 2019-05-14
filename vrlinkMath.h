@@ -435,7 +435,6 @@ inline void Transform(const cvTObjState::AvatarState& src, AvatarStateTran& dst)
 
 inline void Transform(const AvatarStateTran& src, cvTObjState::AvatarState& dst)
 {
-	memset(&dst, 0, sizeof(cvTObjState::AvatarState));
 	dst.position.x = src.loc.x();
 	dst.position.y = src.loc.y();
 	dst.position.z = src.loc.z();
@@ -462,7 +461,6 @@ inline void Transform(const AvatarStateTran& src, cvTObjState::AvatarState& dst)
 
 inline void Transform(const AvatarStateTran& src, const ExternalDriverStateTran& parent, cvTObjState::AvatarState& dst)
 {
-	memset(&dst, 0, sizeof(cvTObjState::AvatarState));
 	glm::dmat3 r_p2w, r_l2p;
 	TaitBryan2Matrix(parent.ori, r_p2w);
 	TaitBryan2Matrix(src.ori, r_l2p);
@@ -505,19 +503,19 @@ inline void Transform(const cvTObjState::AvatarState& src, const ExternalDriverS
 	const glm::dmat3& r_w2p = r_p2wInv;
 	glm::dvec3 t_w2p = -r_p2wInv * t_p2w;
 
-	
+
 	glm::dmat3 r_l2w;
 	Frame2Matrix(c_t0, c_l0, src.tangent, src.lateral, r_l2w);
 	glm::dvec3 t_l2w(src.position.x, src.position.y, src.position.z);
 
 	glm::dmat3 r_l2p = r_w2p * r_l2w;
 	glm::dvec3 t_l2p = r_w2p * t_l2w + t_w2p;
-	
+
 	RotMatrix2TaitBryan(r_l2p, dst.ori);
 	dst.loc.setX(t_l2p.x);
 	dst.loc.setY(t_l2p.y);
 	dst.loc.setZ(t_l2p.z);
-	
+
 	dst.child_first = src.child_first;
 }
 

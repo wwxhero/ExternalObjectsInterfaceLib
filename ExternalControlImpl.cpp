@@ -158,7 +158,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_
 	int i_peg = pegged? 1: 0;
 	//curState->externalDriverState.visualState = 2;
 	//const struct cvTObjState::AvatarState& s_a = curState->avatarState;
-	TRACE(TEXT("OnGetUpdate %s id:%d from ip:[%d.%d.%d.%d] %s")
+	TRACE(TEXT("OnGetUpdateArt %s id:%d from ip:[%d.%d.%d.%d] %s")
 							TEXT(", \n\t position: [%E,%E,%E]")
 							TEXT(", \n\t tangent: [%E,%E,%E]")
 							TEXT(", \n\t lateral: [%E,%E,%E]")
