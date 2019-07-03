@@ -99,7 +99,9 @@ public:
 	virtual void Send(IP ip, GlobalId id_global, const cvTObjState* s);
 	virtual bool Receive(GlobalId id_global, cvTObjState* s);
 	virtual void SendArt(IP ip, GlobalId id_global, const cvTObjState* s); //fixme: move it to VrlinkDisPedCtrl
+	virtual void SendArt(IP ip, GlobalId id_global, GlobalId id_parent, const cvTObjState* s); //fixme: move it to VrlinkDisPedCtrl
 	virtual bool ReceiveArt(GlobalId id_global, cvTObjState* s);
+	virtual bool ReceiveArt(GlobalId id_global, GlobalId id_parent, cvTObjState* s);
 	virtual void PostDynaCalc();
 protected:
 	inline bool getEntityPub(IP ip, GlobalId id_global, EntityPublisher& pub)

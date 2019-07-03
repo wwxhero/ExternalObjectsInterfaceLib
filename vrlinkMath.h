@@ -54,6 +54,13 @@ inline double rad2deg(double r)
 	return (r/PI)*180;
 }
 
+inline void RotMatrix2TaitBryan(const glm::dmat3& rot_m, DtTaitBryan& rot_euler)
+{
+	glm::dquat q = glm::quat_cast(rot_m);
+	DtQuaternion q_vrlink(q.w, q.x, q.y, q.z);
+	rot_euler = q_vrlink; //this call might have performance overhead
+}
+
 inline void Frame2TaitBryan(const TVector3D& tangent, const TVector3D& lateral, const TVector3D& tangent_prime, const TVector3D& lateral_prime, DtTaitBryan& ori)
 {
 	//generate tait-bryan euler angle from [t,l,b] to [t', l', b']
@@ -73,11 +80,82 @@ inline void Frame2TaitBryan(const TVector3D& tangent, const TVector3D& lateral, 
 	f_prime[1] = l_prime;
 	f_prime[2] = b_prime;
 
-	glm::dmat3 r = f_prime * glm::inverse(f);
+	glm::dmat3 r = f_prime * glm::inverse(f); //fixme: optimise inverse with glm::transpose if [t l b] is an orthonormal matrix
 
 	glm::dquat q = glm::quat_cast(r);
 	DtQuaternion q_vrlink(q.w, q.x, q.y, q.z);
 	ori = q_vrlink; //this call might have performance overhead
+}
+
+inline void Frame2Matrix(const TVector3D& tangent, const TVector3D& lateral, const TVector3D& tangent_prime, const TVector3D& lateral_prime, glm::dmat3& rot)
+{
+	glm::dvec3 t(tangent.i, tangent.j, tangent.k);
+	glm::dvec3 l(lateral.i, lateral.j, lateral.k);
+	glm::dvec3 b = glm::cross(t, l);
+	glm::dmat3 f;
+	f[0] = t;
+	f[1] = l;
+	f[2] = b;
+
+	glm::dvec3 t_prime(tangent_prime.i, tangent_prime.j, tangent_prime.k);
+	glm::dvec3 l_prime(lateral_prime.i, lateral_prime.j, lateral_prime.k);
+	glm::dvec3 b_prime = glm::cross(t_prime, l_prime);
+	glm::dmat3 f_prime;
+	f_prime[0] = t_prime;
+	f_prime[1] = l_prime;
+	f_prime[2] = b_prime;
+
+	rot = f_prime * glm::inverse(f); //fixme: computing inverse might be optimized with glm::transpose
+}
+
+
+inline void TaitBryan2Matrix(const DtTaitBryan& ori, glm::dmat3& mat)
+{
+	double psi = ori.psi();
+	double theta = ori.theta();
+	double phi = ori.phi();
+	double c1 = cos(psi);
+	double s1 = sin(psi);
+	double c2 = cos(theta);
+	double s2 = sin(theta);
+	double c3 = cos(phi);
+	double s3 = sin(phi);
+	glm::dmat3 r(c1*c2					,c2*s1					,-s2
+				,c1*s2*s3 - c3*s1		,c1*c3 + s1*s2*s3		,c2*s3
+				,s1*s3 + c1*c3*s2		,c3*s1*s2 - c1*s3		,c2*c3);
+	mat = r;
+}
+
+inline void TaitBryan2MatrixInv(const DtTaitBryan& ori, glm::dmat3& mat)
+{
+	double psi = ori.psi();
+	double theta = ori.theta();
+	double phi = ori.phi();
+	double c1 = cos(psi);
+	double s1 = sin(psi);
+	double c2 = cos(theta);
+	double s2 = sin(theta);
+	double c3 = cos(phi);
+	double s3 = sin(phi);
+	glm::dmat3 r(c1*c2		,c1*s2*s3 - c3*s1		,s1*s3 + c1*c3*s2
+				,c2*s1		,c1*c3 + s1*s2*s3		,c3*s1*s2 - c1*s3
+				,-s2		,c2*s3					,c2*c3);
+	mat = r;
+}
+
+inline void RotMatrix2Frame(const glm::dmat3& r, const TVector3D& tangent, const TVector3D& lateral, TVector3D& tangent_prime, TVector3D& lateral_prime)
+{
+	glm::dvec3 t(tangent.i, tangent.j, tangent.k);
+	glm::dvec3 t_prime = r * t;
+	tangent_prime.i = t_prime.x;
+	tangent_prime.j = t_prime.y;
+	tangent_prime.k = t_prime.z;
+
+	glm::dvec3 l(lateral.i, lateral.j, lateral.k);
+	glm::dvec3 l_prime = r * l;
+	lateral_prime.i = l_prime.x;
+	lateral_prime.j = l_prime.y;
+	lateral_prime.k = l_prime.z;
 }
 
 inline void TaitBryan2Frame(const DtTaitBryan& ori, const TVector3D& tangent, const TVector3D& lateral, TVector3D& tangent_prime, TVector3D& lateral_prime)
@@ -338,14 +416,15 @@ inline void Transform(const ExternalDriverStateTran& src, cvTObjState::VehicleSt
 	dst.yawRate = rad2deg(angularVel.k);
 
 	dst.steeringWheelAngle = src.steeringWheel.rot;
-	dst.tireRot[0] = src.tire.rot[0]; 
-	dst.tireRot[1] = src.tire.rot[1]; 
+	dst.tireRot[0] = src.tire.rot[0];
+	dst.tireRot[1] = src.tire.rot[1];
 	dst.tireRot[2] = src.tire.rot[2];
-	
+
 }
 
 inline void Transform(const cvTObjState::AvatarState& src, AvatarStateTran& dst)
 {
+	memset(&dst, 0, sizeof(AvatarStateTran));
 	dst.loc.setX(src.position.x);
 	dst.loc.setY(src.position.y);
 	dst.loc.setZ(src.position.z);
@@ -356,7 +435,6 @@ inline void Transform(const cvTObjState::AvatarState& src, AvatarStateTran& dst)
 
 inline void Transform(const AvatarStateTran& src, cvTObjState::AvatarState& dst)
 {
-	memset(&dst, 0, sizeof(cvTObjState::AvatarState));
 	dst.position.x = src.loc.x();
 	dst.position.y = src.loc.y();
 	dst.position.z = src.loc.z();
@@ -377,6 +455,66 @@ inline void Transform(const AvatarStateTran& src, cvTObjState::AvatarState& dst)
 
 	TVector3D angularVel;
 	AVVrlink2SimRad(src.rot_v, angularVel, dst.tangent, dst.lateral);
+
+	dst.child_first = src.child_first;
+}
+
+inline void Transform(const AvatarStateTran& src, const ExternalDriverStateTran& parent, cvTObjState::AvatarState& dst)
+{
+	glm::dmat3 r_p2w, r_l2p;
+	TaitBryan2Matrix(parent.ori, r_p2w);
+	TaitBryan2Matrix(src.ori, r_l2p);
+	glm::dmat3 r_l2w = r_p2w * r_l2p;
+	glm::dvec3 t_l2p(src.loc.x(), src.loc.y(), src.loc.z());
+	glm::dvec3 t_p2w(parent.loc.x(), parent.loc.y(), parent.loc.z());
+	glm::dvec3 t_l2w = r_p2w * t_l2p + t_p2w;
+
+	dst.position.x = t_l2w.x;
+	dst.position.y = t_l2w.y;
+	dst.position.z = t_l2w.z;
+
+	//fixme: hardcoded assumption, no relative velocity btw child and parent
+	DtVector32 v = parent.vel;
+	dst.vel = sqrt(v.magnitudeSquared());
+
+	RotMatrix2Frame(r_l2w, c_t0, c_l0, dst.tangent, dst.lateral);
+
+	DtVector32 a = parent.acc;
+	DtVector32 t = v;
+	DtVector32 l(dst.lateral.i, dst.lateral.j, dst.lateral.k);
+
+	dst.acc = a.dotProduct(t);
+	double al = a.dotProduct(l);
+	dst.latAccel = al;
+
+
+	TVector3D angularVel;
+	AVVrlink2SimRad(parent.rot_v, angularVel, dst.tangent, dst.lateral);
+
+	dst.child_first = src.child_first;
+}
+
+inline void Transform(const cvTObjState::AvatarState& src, const ExternalDriverStateTran& parent, AvatarStateTran& dst)
+{
+	memset(&dst, 0, sizeof(AvatarStateTran));
+	glm::dmat3 r_p2wInv;
+	TaitBryan2MatrixInv(parent.ori, r_p2wInv);
+	glm::dvec3 t_p2w(parent.loc.x(), parent.loc.y(), parent.loc.z());
+	const glm::dmat3& r_w2p = r_p2wInv;
+	glm::dvec3 t_w2p = -r_p2wInv * t_p2w;
+
+
+	glm::dmat3 r_l2w;
+	Frame2Matrix(c_t0, c_l0, src.tangent, src.lateral, r_l2w);
+	glm::dvec3 t_l2w(src.position.x, src.position.y, src.position.z);
+
+	glm::dmat3 r_l2p = r_w2p * r_l2w;
+	glm::dvec3 t_l2p = r_w2p * t_l2w + t_w2p;
+
+	RotMatrix2TaitBryan(r_l2p, dst.ori);
+	dst.loc.setX(t_l2p.x);
+	dst.loc.setY(t_l2p.y);
+	dst.loc.setZ(t_l2p.z);
 
 	dst.child_first = src.child_first;
 }
