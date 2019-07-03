@@ -26,6 +26,7 @@ public:
 							, const CVector3D& t
 							, const CVector3D& l);
 	virtual void OnDeleteADO(TObjectPoolIdx id_local);
+	virtual void OnTelePDO(TObjContInpPoolIdx id_local, const CPoint3D& pos, const CVector3D& tan, const CVector3D& lat);
 	virtual bool Initialize(CHeaderDistriParseBlock& blk, CVED::ICvedDistri* pCvedDistri);
 	virtual void UnInitialize();
 private:

@@ -34,6 +34,11 @@ protected:
 		//EDO controller does not notify for deleting an ado
 		ASSERT(0);
 	}
+	virtual void Notify_OnTelePDO(GlobalId id_local, const CPoint3D& pos, const CVector3D& tan, const CVector3D& lat)
+	{
+		//EDO controller does not notify for teleporting a PDO
+		ASSERT(0);
+	}
 private:
 	static void OnRequest4CreateAdo( CCustomPdu* pdu, void* pThis );
 	static void OnRequest4DeleteAdo( CCustomPdu* pdu, void* pThis );

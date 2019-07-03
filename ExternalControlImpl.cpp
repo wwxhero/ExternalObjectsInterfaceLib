@@ -524,3 +524,13 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnDeleteADO(TObjectPoolIdx id_loc
 	TRACE(TEXT("ADO Ctrl: Delete ADO %d\n"), id_local);
 	m_setAdosL.erase(id);
 }
+
+template<class TNetworkImpl>
+void CExternalObjectControlImpl<TNetworkImpl>::OnTelePDO(TObjContInpPoolIdx id_local, const CPoint3D& pos, const CVector3D& tan, const CVector3D& lat)
+{
+	assert(ado_controller == c_type);
+	assert(m_mapLid2GidR.end() != m_mapLid2GidR.find(id_local));
+	GlobalId id_global = m_mapLid2GidR[id_local];
+	TNetworkImpl::Notify_OnTelePDO(id_global, pos, tan, lat);
+	TRACE(TEXT("\nADO Ctrl: Teleport PDO %d\n"), id_local);
+}

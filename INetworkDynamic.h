@@ -39,6 +39,7 @@ public:
 							, const CVector3D& t
 							, const CVector3D& l) = 0;
 	virtual void Notify_OnDelAdo(GlobalId id) = 0;
+	virtual void Notify_OnTelePDO(GlobalId id, const CPoint3D& pos, const CVector3D& tan, const CVector3D& lat) = 0;
 	virtual void PostDynaCalc() = 0;
 	virtual void GetLocalhostIps(std::set<IP>& setIps) = 0;
 };
