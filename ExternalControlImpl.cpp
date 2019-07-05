@@ -508,14 +508,12 @@ template<class TNetworkImpl>
 void CExternalObjectControlImpl<TNetworkImpl>::OnNotify_OnTelePdo(GlobalId id_global, CPoint3D* p, CVector3D* t, CVector3D* l)
 {
 	ASSERT(ped_controller == c_type);
-	std::map<GlobalId, CDynObj*>::iterator it = m_mapGid2ObjR.find(id_global);
-	ASSERT(it != m_mapGid2ObjR.end()); //unlike ado: pdo is supposed to have the same life cycle as program
-	CDynObj* obj = (*it).second;
-	TRACE(TEXT("\nOnNotify_OnTelePdo: %d")
+	unsigned char* seg = (unsigned char*)&id_global.owner;
+	TRACE(TEXT("\nOnNotify_OnTelePdo: %u.%u.%u.%u %d")
 			TEXT("\n\tposition: %10.2f\t%10.2f\t%10.2f")
 			TEXT("\n\ttangent: %10.2f\t%10.2f\t%10.2f")
 			TEXT("\n\tlateral: %10.2f\t%10.2f\t%10.2f")
-			, obj->GetId()
+			, seg[0], seg[1], seg[2], seg[3], id_global.objId
 			, p->m_x, p->m_y, p->m_z
 			, t->m_i, t->m_j, t->m_k
 			, l->m_i, l->m_j, l->m_k);
