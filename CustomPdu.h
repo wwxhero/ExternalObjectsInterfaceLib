@@ -18,6 +18,7 @@ public:
 		ExtObjState = DtPduKind(221)
 		, OnCrtAdo = DtPduKind(222)
 		, OnDelAdo = DtPduKind(223)
+		, OnTelePdo = DtPduKind(224)
 	};
 	typedef struct _BuffUnit
 	{

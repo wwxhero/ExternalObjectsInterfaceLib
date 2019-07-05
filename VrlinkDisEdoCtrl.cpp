@@ -21,7 +21,7 @@ void CVrlinkDisEdoCtrl::OnRequest4CreateAdo( CCustomPdu* pdu, void* p )
 	CVector3D l;
 	GlobalId id_global;
 	pduCrtAdo->getTuple(id_global, cName, attri, pt, t, l);
-	pThis->CreateAdoStub(id_global, cName, attri, &pt, &t, &l);
+	pThis->OnNotify_OnNewAdo(id_global, cName, attri, &pt, &t, &l);
 
 }
 void CVrlinkDisEdoCtrl::OnRequest4DeleteAdo( CCustomPdu* pdu, void* p )
@@ -29,7 +29,7 @@ void CVrlinkDisEdoCtrl::OnRequest4DeleteAdo( CCustomPdu* pdu, void* p )
 	CPduDelAdo* pduDelAdo = static_cast<CPduDelAdo*>(pdu);
 	CVrlinkDisEdoCtrl* pThis = reinterpret_cast<CVrlinkDisEdoCtrl*>(p);
 	GlobalId id_global = pduDelAdo->globalId();
-	pThis->DeleteAdoStub(id_global);
+	pThis->OnNotify_OnDelAdo(id_global);
 }
 
 CVrlinkDisEdoCtrl::CVrlinkDisEdoCtrl(void) : CVrlinkDisDynamic(edo_controller)

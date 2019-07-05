@@ -165,6 +165,7 @@
     <ClInclude Include="PduCrtAdo.h" />
     <ClInclude Include="PduDelAdo.h" />
     <ClInclude Include="PduExtObj.h" />
+    <ClInclude Include="PduTelePdo.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="utility.h" />
@@ -180,6 +181,7 @@
     <ClCompile Include="PduCrtAdo.cpp" />
     <ClCompile Include="PduDelAdo.cpp" />
     <ClCompile Include="PduExtObj.cpp" />
+    <ClCompile Include="PduTelePdo.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

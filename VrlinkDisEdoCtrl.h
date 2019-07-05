@@ -11,13 +11,13 @@ protected:
 	virtual void NetworkInitialize(const std::list<IP>& sendTo, const std::list<IP>& receiveFrom, int port, IP self);
 	virtual void NetworkUninitialize();
 
-	virtual void CreateAdoStub(GlobalId id_global
+	virtual void OnNotify_OnNewAdo(GlobalId id_global
 							, const std::string& name
 							, const cvTObjAttr& cAttr
 							, const CPoint3D* cpInitPos
 							, const CVector3D* cpInitTran
 							, const CVector3D* cpInitLat) = 0;
-	virtual void DeleteAdoStub(GlobalId id_global) = 0;
+	virtual void OnNotify_OnDelAdo(GlobalId id_global) = 0;
 
 	virtual void Notify_OnNewAdo(GlobalId id
 							, const char* szName

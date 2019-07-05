@@ -30,13 +30,14 @@ public:
 	virtual bool Initialize(CHeaderDistriParseBlock& blk, CVED::ICvedDistri* pCvedDistri);
 	virtual void UnInitialize();
 private:
-	virtual void CreateAdoStub(GlobalId id_global
+	virtual void OnNotify_OnNewAdo(GlobalId id_global
 							, const std::string& name
 							, const cvTObjAttr& cAttr
 							, const CPoint3D* cpInitPos
 							, const CVector3D* cpInitTran
 							, const CVector3D* cpInitLat);
-	virtual void DeleteAdoStub(GlobalId id_global);
+	virtual void OnNotify_OnDelAdo(GlobalId id_global);
+	virtual void OnNotify_OnTelePdo(GlobalId id_global, CPoint3D* p, CVector3D* t, CVector3D* l);
 private:
 	std::map<TObjectPoolIdx, GlobalId> m_mapLid2GidR;	//stores all the IDs of remote dynamic objects
 	std::map<GlobalId, CVED::CDynObj*> m_mapGid2ObjR; 		//stores remote dynamic objects
