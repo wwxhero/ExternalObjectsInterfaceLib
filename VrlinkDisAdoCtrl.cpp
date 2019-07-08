@@ -86,7 +86,6 @@ void CVrlinkDisAdoCtrl::Notify_OnDelAdo(GlobalId id_global)
 
 void CVrlinkDisAdoCtrl::Notify_OnTelePDO(GlobalId id_global, const CPoint3D& pos, const CVector3D& tan, const CVector3D& lat)
 {
-	//fixme: send out customized PDU for fetching the message
 	CPduTelePdo telePdo(id_global, pos, tan, lat);
 	for (std::map<IP, CnnOut>::iterator itCnn = m_cnnsOut.begin()
 		; itCnn != m_cnnsOut.end()

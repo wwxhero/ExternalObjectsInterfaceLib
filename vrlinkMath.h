@@ -334,12 +334,6 @@ typedef struct ExternalDriverStateTran_tag
 
 enum {ART_SteeringWheel = 4096, ART_Tire0 = 4128, ART_Tire1 = 4160, ART_Tire2 = 4192};
 
-typedef struct ExternalDriverStateTranLO_tag //fixme: going to be removed
-{
-	DtVector    loc;
-	DtTaitBryan ori;
-} ExternalDriverStateTranLO;
-
 typedef struct AvatarStateTran_tag
 {
 	DtVector32  vel;
@@ -376,15 +370,6 @@ inline void Transform(const cvTObjState::ExternalDriverState& src, ExternalDrive
 	dst.tire.rot[0] = src.tireRot[0];
 	dst.tire.rot[1] = src.tireRot[1];
 	dst.tire.rot[2] = src.tireRot[2];
-}
-
-inline void TransformLO(const cvTObjState::ExternalDriverState& src, ExternalDriverStateTranLO& dst)
-{
-	dst.loc.setX(src.position.x);
-	dst.loc.setY(src.position.y);
-	dst.loc.setZ(src.position.z);
-
-	Frame2TaitBryan(c_t0, c_l0, src.tangent, src.lateral, dst.ori);
 }
 
 inline void Transform(const ExternalDriverStateTran& src, cvTObjState::VehicleState& a_dst)
