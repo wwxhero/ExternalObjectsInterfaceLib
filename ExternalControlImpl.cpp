@@ -517,7 +517,8 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnNotify_OnTelePdo(GlobalId id_gl
 			, p->m_x, p->m_y, p->m_z
 			, t->m_i, t->m_j, t->m_k
 			, l->m_i, l->m_j, l->m_k);
-	//fixme: push the event into event queue for unity client
+	if (id_global.owner == m_selfIp)
+		m_pCved->LocalTeleportPDO(m_pedestrian, p, t, l);
 }
 
 template<class TNetworkImpl>
