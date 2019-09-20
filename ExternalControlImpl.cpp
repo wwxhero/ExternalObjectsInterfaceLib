@@ -185,7 +185,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::OnGetUpdateArt(TObjectPoolIdx id_
 	TVector3D* offsets = new TVector3D[numNames];
 	CArtiJoints::BFTGetJoints(curState, angles, offsets, numNames);
 	TRACE(TEXT(", \n\t joints:"));
-	for (int i_n = 0; i_n < numNames; i_n ++)
+	for (unsigned int i_n = 0; i_n < numNames; i_n ++)
 	{
 		TRACE(TEXT(", \n\t\t%d:[%s]=<%d, %d, %d>, <%6.4f, %6.4f, %6.4f>")
 			, i_n, szNames[i_n], (int)rad2deg(angles[i_n].i), (int)rad2deg(angles[i_n].j), (int)rad2deg(angles[i_n].k)
@@ -298,7 +298,7 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnPushUpdateArt(TObjectPoolIdx id
 	TVector3D* offsets = new TVector3D[numNames];
 	CArtiJoints::BFTGetJoints(nextState, angles, offsets, numNames);
 	TRACE(TEXT(", \n\t joints:"));
-	for (int i_n = 0; i_n < numNames; i_n ++)
+	for (unsigned int i_n = 0; i_n < numNames; i_n ++)
 	{
 		TRACE(TEXT(", \n\t\t%d:[%s]=<%d, %d, %d>, <%6.4f, %6.4f, %6.4f>")
 					, i_n, szNames[i_n], (int)rad2deg(angles[i_n].i), (int)rad2deg(angles[i_n].j), (int)rad2deg(angles[i_n].k)
@@ -330,7 +330,7 @@ bool CExternalObjectControlImpl<TNetworkImpl>::Initialize(CHeaderDistriParseBloc
 	{
 		std::string ipStr = hBlk.GetIPV4();
 
-		IP simIP = inet_addr(ipStr.c_str());
+		IP simIP = inet_addr(ipStr.c_str()); //fixme: this api is deprecated
 		bool selfBlk = (localhostIps.end() != localhostIps.find(simIP))
 						&& c_type == hBlk.GetType();
 		bool neighborBlk = !selfBlk;
@@ -473,23 +473,25 @@ void CExternalObjectControlImpl<TNetworkImpl>::PostUpdateDynamicModels()
 }
 
 template<class TNetworkImpl>
-void CExternalObjectControlImpl<TNetworkImpl>::CreateAdoStub(GlobalId id_global
+void CExternalObjectControlImpl<TNetworkImpl>::OnNotify_OnNewAdo(GlobalId id_global
 													, const std::string& name
 													, const cvTObjAttr& cAttr
 													, const CPoint3D* cpInitPos
 													, const CVector3D* cpInitTran
 													, const CVector3D* cpInitLat)
 {
+	ASSERT(ado_controller != c_type);
 	CDynObj* obj = m_pCved->LocalCreateADO(name, cAttr, cpInitPos, cpInitTran, cpInitLat);
 	TObjectPoolIdx id_local = obj->GetId();
 	m_mapLid2GidR[id_local] = id_global;
 	m_mapGid2ObjR[id_global] = obj;
-	TRACE(TEXT("EDO Ctrl: Create ADO %d\n"), id_local);
+	TRACE(TEXT("\nEDO Ctrl: Create ADO %d\n"), id_local);
 }
 
 template<class TNetworkImpl>
-void CExternalObjectControlImpl<TNetworkImpl>::DeleteAdoStub(GlobalId id_global)
+void CExternalObjectControlImpl<TNetworkImpl>::OnNotify_OnDelAdo(GlobalId id_global)
 {
+	ASSERT(ado_controller != c_type);
 	std::map<GlobalId, CDynObj*>::iterator it = m_mapGid2ObjR.find(id_global);
 	if (it != m_mapGid2ObjR.end())
 	{
@@ -498,8 +500,25 @@ void CExternalObjectControlImpl<TNetworkImpl>::DeleteAdoStub(GlobalId id_global)
 		m_pCved->LocalDeleteDynObj(obj);
 		m_mapGid2ObjR.erase(it);
 		m_mapLid2GidR.erase(id_local);
-		TRACE(TEXT("EDO Ctrl: Delete ADO %d\n"), id_local);
+		TRACE(TEXT("\nEDO Ctrl: Delete ADO %d\n"), id_local);
 	}
+}
+
+template<class TNetworkImpl>
+void CExternalObjectControlImpl<TNetworkImpl>::OnNotify_OnTelePdo(GlobalId id_global, CPoint3D* p, CVector3D* t, CVector3D* l)
+{
+	ASSERT(ped_controller == c_type);
+	unsigned char* seg = (unsigned char*)&id_global.owner;
+	TRACE(TEXT("\nOnNotify_OnTelePdo: %u.%u.%u.%u %d")
+			TEXT("\n\tposition: %10.2f\t%10.2f\t%10.2f")
+			TEXT("\n\ttangent: %10.2f\t%10.2f\t%10.2f")
+			TEXT("\n\tlateral: %10.2f\t%10.2f\t%10.2f")
+			, seg[0], seg[1], seg[2], seg[3], id_global.objId
+			, p->m_x, p->m_y, p->m_z
+			, t->m_i, t->m_j, t->m_k
+			, l->m_i, l->m_j, l->m_k);
+	if (id_global.owner == m_selfIp)
+		m_pCved->LocalTeleportPDO(m_pedestrian, p, t, l);
 }
 
 template<class TNetworkImpl>
@@ -523,4 +542,14 @@ void CExternalObjectControlImpl<TNetworkImpl>::OnDeleteADO(TObjectPoolIdx id_loc
 	TNetworkImpl::Notify_OnDelAdo(id);
 	TRACE(TEXT("ADO Ctrl: Delete ADO %d\n"), id_local);
 	m_setAdosL.erase(id);
+}
+
+template<class TNetworkImpl>
+void CExternalObjectControlImpl<TNetworkImpl>::OnTelePDO(TObjContInpPoolIdx id_local, const CPoint3D& pos, const CVector3D& tan, const CVector3D& lat)
+{
+	assert(ado_controller == c_type);
+	assert(m_mapLid2GidR.end() != m_mapLid2GidR.find(id_local));
+	GlobalId id_global = m_mapLid2GidR[id_local];
+	TNetworkImpl::Notify_OnTelePDO(id_global, pos, tan, lat);
+	TRACE(TEXT("\nADO Ctrl: Teleport PDO %d\n"), id_local);
 }

@@ -15,6 +15,8 @@
 #include "VrlinkDisAdoCtrl.h"
 #include "PduCrtAdo.h"
 #include "PduDelAdo.h"
+#include "PduTelePdo.h"
+#include "utility.h"
 
 
 CVrlinkDisAdoCtrl::CVrlinkDisAdoCtrl(void) : CVrlinkDisDynamic(ado_controller)
@@ -80,4 +82,25 @@ void CVrlinkDisAdoCtrl::Notify_OnDelAdo(GlobalId id_global)
 			out.pubs.erase(itPub);
 		}
 	}
+}
+
+void CVrlinkDisAdoCtrl::Notify_OnTelePDO(GlobalId id_global, const CPoint3D& pos, const CVector3D& tan, const CVector3D& lat)
+{
+	CPduTelePdo telePdo(id_global, pos, tan, lat);
+	for (std::map<IP, CnnOut>::iterator itCnn = m_cnnsOut.begin()
+		; itCnn != m_cnnsOut.end()
+		; itCnn ++)
+	{
+		CnnOut& out = itCnn->second;
+		out.cnn->sendStamped(telePdo);
+	}
+	unsigned char* seg = (unsigned char*)&id_global.owner;
+	TRACE(TEXT("\nCVrlinkDisAdoCtrl::Notify_OnTelePDO:[%d.%d.%d.%d]  %d")
+			TEXT("\n\tp:%10.2f %10.2f %10.2f")
+			TEXT("\n\tt:%10.2f %10.2f %10.2f")
+			TEXT("\n\tl:%10.2f %10.2f %10.2f")
+		, seg[0], seg[1], seg[2], seg[3], id_global.objId
+		, pos.m_x, pos.m_y, pos.m_z
+		, tan.m_i, tan.m_j, tan.m_k
+		, lat.m_i, lat.m_j, lat.m_k);
 }
